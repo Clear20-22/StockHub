@@ -1,0 +1,366 @@
+/* Layout */
+.wh-dashboard-bg {
+  min-height: 100vh;
+  background: linear-gradient(120deg,#e9eef6 0%,#d3e0ea 100%);
+  display: flex;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+/* Sidebar */
+.wh-sidebar {
+  width: 220px;
+  background: #22304a;
+  color: #fff;
+  padding: 2rem 1.2rem 1.2rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  box-sizing: border-box;
+  transition: width 0.3s, padding 0.3s;
+}
+
+.wh-sidebar h2 {
+  font-size: 1.7rem;
+  font-weight: 700;
+  margin-bottom: 2.5rem;
+  line-height: 1.3;
+  transition: font-size 0.3s, margin-bottom 0.3s;
+}
+
+.wh-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.wh-sidebar nav a {
+  color: #c0d1e6;
+  text-decoration: none;
+  font-size: 1.1rem;
+  transition: color 0.2s, background 0.3s, font-size 0.3s;
+  padding: 0.3em 0.6em;
+  border-radius: 7px;
+}
+
+.wh-sidebar nav a.active, .wh-sidebar nav a:hover {
+  background: #2c4471;
+  color: #fff;
+}
+
+/* Main Dashboard */
+.wh-dashboard-main {
+  flex: 1;
+  padding: 2.2rem 2.5rem;
+  box-sizing: border-box;
+  transition: padding 0.3s;
+}
+
+.wh-dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.wh-dashboard-header h1 {
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: #22304a;
+  transition: font-size 0.3s;
+}
+
+.wh-date {
+  color: #40638b;
+  font-weight: 500;
+  font-size: 1.1rem;
+  transition: font-size 0.3s;
+}
+
+/* Stats Cards */
+.wh-stats-cards {
+  display: flex;
+  gap: 1.3rem;
+  margin-bottom: 2.2rem;
+  flex-wrap: wrap;
+}
+
+.wh-card {
+  background: #fff;
+  border-radius: 15px;
+  box-shadow: 0 2px 12px rgba(62, 103, 154, 0.08);
+  padding: 1.1rem 1.5rem;
+  flex: 1 1 175px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 140px;
+  box-sizing: border-box;
+}
+
+.wh-card-label {
+  font-size: 1.02rem;
+  color: #5f7ca5;
+  margin-bottom: 0.7em;
+}
+
+.wh-card-value {
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: #22304a;
+  transition: font-size 0.3s;
+}
+
+.wh-warn {
+  color: #f7b731;
+}
+.wh-error {
+  color: #e74c3c;
+}
+
+/* Dashboard Grid */
+.wh-dashboard-grid {
+  display: flex;
+  gap: 2.3rem;
+  align-items: flex-start;
+  box-sizing: border-box;
+  transition: gap 0.3s;
+}
+
+.wh-main-block {
+  flex: 2 1 0;
+  background: #fff;
+  border-radius: 15px;
+  box-shadow: 0 2px 12px rgba(62, 103, 154, 0.08);
+  padding: 1.4rem 2rem 1.4rem 1.6rem;
+  box-sizing: border-box;
+}
+
+.wh-main-block h2 {
+  margin-bottom: 1.1rem;
+  color: #22304a;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* Table */
+.wh-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.wh-table th,
+.wh-table td {
+  padding: 0.8em 1em;
+  text-align: left;
+  font-size: 1rem;
+}
+
+.wh-table th {
+  background: #f3f7fc;
+  color: #4b6fa9;
+  font-weight: 600;
+  border-bottom: 2px solid #e2e6ed;
+}
+
+.wh-table tr:not(:last-child) td {
+  border-bottom: 1px solid #e2e6ed;
+}
+
+/* Badges */
+.wh-badge {
+  display: inline-block;
+  padding: 0.2em 0.7em;
+  border-radius: 12px;
+  font-size: 0.97em;
+  font-weight: 500;
+  color: #fff;
+}
+.wh-badge-shipped { background: #2d98da; }
+.wh-badge-pending { background: #f7b731; }
+.wh-badge-delivered { background: #20bf6b; }
+
+/* Side Block (Alerts & Actions) */
+.wh-side-block {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2.3rem;
+  box-sizing: border-box;
+}
+
+.wh-block {
+  background: #fff;
+  border-radius: 13px;
+  box-shadow: 0 2px 10px rgba(62, 103, 154, 0.06);
+  padding: 1.15rem 1.2rem 1.1rem 1.2rem;
+  box-sizing: border-box;
+}
+
+.wh-block h3 {
+  font-size: 1.13rem;
+  font-weight: 600;
+  color: #22304a;
+  margin-bottom: 0.7em;
+}
+
+.wh-alert-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.wh-alert-list li {
+  font-size: 1.01rem;
+  color: #f7b731;
+  margin-bottom: 0.7em;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+.wh-alert-list li.wh-error {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+/* Quick Actions */
+.wh-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75em;
+}
+
+.wh-actions button {
+  background: #22304a;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 0.7em 1em;
+  font-size: 1.07em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  outline: none;
+}
+
+.wh-actions button:hover {
+  background: #4564a0;
+}
+
+/* Responsive */
+@media (max-width: 1250px) {
+  .wh-dashboard-main {
+    padding: 1.5rem 1.1rem;
+  }
+  .wh-dashboard-header h1 {
+    font-size: 1.5rem;
+  }
+  .wh-card-value {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 950px) {
+  .wh-dashboard-bg {
+    flex-direction: column;
+  }
+  .wh-sidebar {
+    width: 100%;
+    min-height: unset;
+    flex-direction: row;
+    align-items: center;
+    padding: 1rem 0.6rem;
+    justify-content: space-between;
+  }
+  .wh-sidebar h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0;
+    margin-right: 1.3rem;
+  }
+  .wh-sidebar nav {
+    flex-direction: row;
+    gap: 0.9rem;
+  }
+  .wh-sidebar nav a {
+    font-size: 0.98rem;
+    padding: 0.3em 0.55em;
+  }
+  .wh-dashboard-main {
+    padding: 1.2rem 0.4rem;
+  }
+  .wh-stats-cards {
+    flex-wrap: wrap;
+    gap: 0.7rem;
+  }
+  .wh-dashboard-grid {
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  .wh-main-block, .wh-side-block {
+    width: 100%;
+    padding: 1rem 0.6rem;
+  }
+}
+
+@media (max-width: 650px) {
+  .wh-sidebar {
+    padding: 0.6rem 0.3rem;
+  }
+  .wh-sidebar h2 {
+    font-size: 0.92rem;
+    margin-right: 0.7rem;
+  }
+  .wh-sidebar nav a {
+    font-size: 0.82rem;
+    padding: 0.25em 0.4em;
+  }
+  .wh-dashboard-main {
+    padding: 0.6rem 0.1rem;
+  }
+  .wh-dashboard-header h1 {
+    font-size: 1.13rem;
+  }
+  .wh-date {
+    font-size: 0.91rem;
+  }
+  .wh-main-block, .wh-side-block {
+    padding: 0.7rem 0.2rem;
+    border-radius: 8px;
+  }
+  .wh-dashboard-grid {
+    gap: 0.7rem;
+  }
+  .wh-card-label {
+    font-size: 0.89rem;
+  }
+  .wh-card-value {
+    font-size: 1.07rem;
+  }
+  .wh-block h3 {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .wh-sidebar {
+    padding: 0.3rem 0.12rem;
+    min-width: unset;
+  }
+  .wh-sidebar h2 {
+    font-size: 0.7rem;
+    margin-right: 0.3rem;
+  }
+  .wh-main-block, .wh-side-block {
+    padding: 0.4rem 0.05rem;
+    border-radius: 4px;
+  }
+  .wh-card {
+    padding: 0.7rem 0.7rem;
+    border-radius: 7px;
+  }
+  .wh-dashboard-header {
+    gap: 0.3rem;
+  }
+}
