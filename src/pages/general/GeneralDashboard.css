@@ -1,0 +1,150 @@
+/* General Dashboard Background */
+.wh-dashboard-bg {
+  min-height: 100vh;
+  background: linear-gradient(120deg, #e9eef6 0%, #d3e0ea 100%);
+  display: flex;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+/* Main Dashboard Content */
+.wh-dashboard-main {
+  flex: 1;
+  padding: 2.5rem;
+  box-sizing: border-box;
+}
+
+/* Header */
+.wh-dashboard-header {
+  background: #ffffff;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #ddd;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.wh-logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #22304a;
+}
+
+.wh-nav {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 1rem;
+  margin: 0.5rem 0;
+  flex-wrap: wrap;
+}
+
+.wh-nav a {
+  color: #40638b;
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
+}
+
+.wh-nav a:hover {
+  color: #1f2e55;
+}
+
+.wh-auth {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.wh-login-btn,
+.wh-signup-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #40638b;
+  background-color: white;
+  color: #40638b;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wh-login-btn:hover {
+  background-color: #40638b;
+  color: white;
+}
+
+.wh-signup-btn {
+  background-color: #40638b;
+  color: white;
+  border: none;
+}
+
+.wh-signup-btn:hover {
+  background-color: #2f4d7d;
+}
+
+/* Responsive Fix */
+@media (max-width: 768px) {
+  .wh-dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .wh-auth {
+    margin-top: 0.5rem;
+  }
+}
+
+
+/* Main Content Blocks */
+.wh-main-block {
+  background: #fff;
+  border-radius: 15px;
+  box-shadow: 0 2px 12px rgba(62, 103, 154, 0.08);
+  padding: 1.4rem 2rem;
+  margin-bottom: 2rem;
+}
+
+.wh-main-block h2 {
+  margin-bottom: 1.2rem;
+  font-size: 1.5rem;
+  color: #22304a;
+}
+
+/* Cards */
+.wh-stats-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.3rem;
+}
+
+.wh-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(62, 103, 154, 0.06);
+  padding: 1rem;
+  flex: 1 1 250px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.wh-card-label {
+  font-size: 1.1rem;
+  color: #5f7ca5;
+  margin-top: 1rem;
+}
+
+.wh-card-value {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #22304a;
+  margin-top: 0.4rem;
+}
+
+/* Footer */
+.footer {
+  padding: 1rem 0;
+  font-size: 0.95rem;
+  border-top: 1px solid #ccc;
+}
