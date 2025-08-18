@@ -35,6 +35,10 @@
 }
 
 /* Custom base styles */
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -89,4 +93,20 @@ body {
   transition-property: box-shadow;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
+}
+
+/* Performance optimizations for smooth scrolling and background images */
+.transform-gpu {
+  transform: translate3d(0, 0, 0);
+}
+
+.will-change-scroll {
+  will-change: scroll-position;
+}
+
+/* Optimize background images for performance */
+[style*="background-image"] {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
 }
