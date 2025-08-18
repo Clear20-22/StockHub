@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Package, Users, Building, ClipboardList, LogOut, User, Menu, X } from 'lucide-react';
+import { smoothScrollToElement } from '../../utils/smoothScroll';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -45,13 +47,27 @@ const Navbar = () => {
     setIsMobileMenuOpen(false);
   };
 
+  // Handle navigation to sections
+  const handleSectionNavigation = (sectionId) => {
+    // If not on home page, navigate to home first then scroll
+    if (location.pathname !== '/') {
+      navigate('/');
+      setTimeout(() => {
+        smoothScrollToElement(sectionId, 80, 1000);
+      }, 100);
+    } else {
+      smoothScrollToElement(sectionId, 80, 1000);
+    }
+    closeMobileMenu();
+  };
+
   const getNavItems = () => {
     if (!isAuthenticated) {
       return [
-        { name: 'Home', path: '/' },
-        { name: 'About', path: '/about' },
-        { name: 'Branches', path: '/branches' },
-        { name: 'Contact', path: '/contact' },
+        { name: 'Home', action: () => navigate('/') },
+        { name: 'About', action: () => handleSectionNavigation('about') },
+        { name: 'Branches', action: () => handleSectionNavigation('branches') },
+        { name: 'Contact', action: () => handleSectionNavigation('contact') },
       ];
     }
 
@@ -118,14 +134,25 @@ const Navbar = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-2">
             {getNavItems().map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className="flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-blue-100 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10 transition-all duration-300 hover:scale-105 hover:shadow-lg backdrop-blur-sm border border-transparent hover:border-white/20 group"
-              >
-                {item.icon && <item.icon className="h-4 w-4 group-hover:scale-110 transition-transform duration-300" />}
-                <span className="drop-shadow-sm">{item.name}</span>
-              </Link>
+              item.path ? (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  className="flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-blue-100 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10 transition-all duration-300 hover:scale-105 hover:shadow-lg backdrop-blur-sm border border-transparent hover:border-white/20 group"
+                >
+                  {item.icon && <item.icon className="h-4 w-4 group-hover:scale-110 transition-transform duration-300" />}
+                  <span className="drop-shadow-sm">{item.name}</span>
+                </Link>
+              ) : (
+                <button
+                  key={item.name}
+                  onClick={item.action}
+                  className="flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-blue-100 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10 transition-all duration-300 hover:scale-105 hover:shadow-lg backdrop-blur-sm border border-transparent hover:border-white/20 group"
+                >
+                  {item.icon && <item.icon className="h-4 w-4 group-hover:scale-110 transition-transform duration-300" />}
+                  <span className="drop-shadow-sm">{item.name}</span>
+                </button>
+              )
             ))}
           </div>
 
@@ -198,15 +225,26 @@ const Navbar = () => {
             <div className="px-2 pt-4 pb-6 space-y-2 bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-md rounded-b-2xl border-t border-white/10 mt-2 shadow-2xl">
               {/* Mobile Navigation Items */}
               {getNavItems().map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={closeMobileMenu}
-                  className="flex items-center space-x-3 px-4 py-3.5 rounded-xl text-base font-semibold text-blue-100 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10 transition-all duration-300 backdrop-blur-sm border border-transparent hover:border-white/20 group"
-                >
-                  {item.icon && <item.icon className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />}
-                  <span className="drop-shadow-sm">{item.name}</span>
-                </Link>
+                item.path ? (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    onClick={closeMobileMenu}
+                    className="flex items-center space-x-3 px-4 py-3.5 rounded-xl text-base font-semibold text-blue-100 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10 transition-all duration-300 backdrop-blur-sm border border-transparent hover:border-white/20 group"
+                  >
+                    {item.icon && <item.icon className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />}
+                    <span className="drop-shadow-sm">{item.name}</span>
+                  </Link>
+                ) : (
+                  <button
+                    key={item.name}
+                    onClick={item.action}
+                    className="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-base font-semibold text-blue-100 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10 transition-all duration-300 backdrop-blur-sm border border-transparent hover:border-white/20 group"
+                  >
+                    {item.icon && <item.icon className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />}
+                    <span className="drop-shadow-sm">{item.name}</span>
+                  </button>
+                )
               ))}
 
               {/* Mobile User Section */}
