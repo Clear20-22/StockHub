@@ -10,8 +10,6 @@ import './App.css'
 
 // Import pages
 import Home from './pages/Home'
-import About from './pages/About'
-import Contact from './pages/Contact'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import CustomerDashboard from './pages/customer/Dashboard'
@@ -23,7 +21,6 @@ import AdminUsers from './pages/admin/Users'
 import AdminGoods from './pages/admin/Goods'
 import AdminBranches from './pages/admin/Branches'
 import AdminAssignments from './pages/admin/Assignments'
-import Branches from './pages/Branches'
 import ProtectedRoute from './components/ProtectedRoute'
 
 // Dashboard router component to redirect based on role
@@ -103,9 +100,6 @@ const AppWithScrolling = () => {
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/branches" element={<Branches />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
