@@ -1,158 +1,93 @@
-import sqlite3
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, ForeignKey, Boolean
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, relationship
+from datetime import datetime
 
-conn = sqlite3.connect('StockHub_db.db')
+SQLALCHEMY_DATABASE_URL = "sqlite:///./stockhub.db"
 
-cursor = conn.cursor()
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Customers (
-        customer_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        email TEXT NOT NULL,
-        phone TEXT NOT NULL,
-        address TEXT NOT NULL,
-        preferred_location_id INTEGER,
-        registration_date TEXT NOT NULL,
-        FOREIGN KEY (preferred_location_id) REFERENCES Locations(location_id)
-    )
-''')
+Base = declarative_base()
 
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Customer_Goods (
-        customer_goods_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER NOT NULL,
-        product_id INTEGER NOT NULL,
-        quantity INTEGER NOT NULL,
-        purchase_date TEXT NOT NULL,
-        FOREIGN KEY (customer_id) REFERENCES Customers(customer_id),
-        FOREIGN KEY (product_id) REFERENCES Products(product_id)
-    )
-''')
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    role = Column(String)  # customer, employee, admin
+    first_name = Column(String)
+    last_name = Column(String)
+    phone = Column(String)
+    address = Column(Text)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    goods = relationship("Goods", back_populates="owner")
+    assignments = relationship("Assignment", back_populates="employee")
 
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Locations (
-        location_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        location_name TEXT NOT NULL,
-        country TEXT NOT NULL,
-        address TEXT NOT NULL,
-        warehouse_id INTEGER,
-        FOREIGN KEY (warehouse_id) REFERENCES Warehouses(warehouse_id)
-    )
-''')
+class Goods(Base):
+    __tablename__ = "goods"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    description = Column(Text)
+    category = Column(String)
+    quantity = Column(Integer)
+    price_per_unit = Column(Float)
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    branch_id = Column(Integer, ForeignKey("branches.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    owner = relationship("User", back_populates="goods")
+    branch = relationship("Branch", back_populates="goods")
 
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Branches (
-        branch_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        branch_name TEXT NOT NULL,
-        address TEXT NOT NULL,
-        location_id INTEGER,
-        manager_id INTEGER,
-        FOREIGN KEY (location_id) REFERENCES Locations(location_id),
-        FOREIGN KEY (manager_id) REFERENCES Employees(employee_id)
-    )
-''')
+class Branch(Base):
+    __tablename__ = "branches"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    location = Column(String)
+    description = Column(Text)
+    image_url = Column(String)
+    manager_id = Column(Integer, ForeignKey("users.id"))
+    capacity = Column(Integer)
+    available_space = Column(Integer)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    manager = relationship("User", foreign_keys=[manager_id])
+    goods = relationship("Goods", back_populates="branch")
+    assignments = relationship("Assignment", back_populates="branch")
 
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Employees (
-        employee_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        email TEXT NOT NULL,
-        phone TEXT NOT NULL,
-        role TEXT NOT NULL,
-        branch_id INTEGER,
-        FOREIGN KEY (branch_id) REFERENCES Branches(branch_id)
-    )
-''')
+class Assignment(Base):
+    __tablename__ = "assignments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("users.id"))
+    task = Column(String)
+    description = Column(Text)
+    status = Column(String, default="pending")  # pending, in_progress, completed
+    priority = Column(String, default="medium")  # low, medium, high
+    branch_id = Column(Integer, ForeignKey("branches.id"))
+    due_date = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    employee = relationship("User", back_populates="assignments")
+    branch = relationship("Branch", back_populates="assignments")
 
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Orders (
-        order_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER NOT NULL,
-        order_date TEXT NOT NULL,
-        total_amount REAL NOT NULL,
-        status TEXT NOT NULL,
-        shipping_address TEXT NOT NULL,
-        FOREIGN KEY (customer_id) REFERENCES Customers(customer_id)
-    )
-''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Order_Details (
-        order_detail_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        order_id INTEGER NOT NULL,
-        product_id INTEGER NOT NULL,
-        quantity INTEGER NOT NULL,
-        unit_price REAL NOT NULL,
-        total_price REAL NOT NULL,
-        FOREIGN KEY (order_id) REFERENCES Orders(order_id),
-        FOREIGN KEY (product_id) REFERENCES Products(product_id)
-    )
-''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Inventory (
-        inventory_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        product_id INTEGER NOT NULL,
-        warehouse_id INTEGER NOT NULL,
-        quantity_in_stock INTEGER NOT NULL,
-        last_updated TEXT NOT NULL,
-        FOREIGN KEY (product_id) REFERENCES Products(product_id),
-        FOREIGN KEY (warehouse_id) REFERENCES Warehouses(warehouse_id)
-    )
-''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Shipping (
-        shipment_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        order_id INTEGER NOT NULL,
-        shipment_date TEXT NOT NULL,
-        tracking_number TEXT NOT NULL,
-        carrier TEXT NOT NULL,
-        status TEXT NOT NULL,
-        FOREIGN KEY (order_id) REFERENCES Orders(order_id)
-    )
-''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Products (
-        product_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        product_name TEXT NOT NULL,
-        category_id INTEGER NOT NULL,
-        description TEXT NOT NULL,
-        price_per_unit REAL NOT NULL,
-        FOREIGN KEY (category_id) REFERENCES Category_Goods(category_id)
-    )
-''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Category_Goods (
-        category_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        category_name TEXT NOT NULL,
-        description TEXT NOT NULL
-    )
-''')
-
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Warehouses (
-        warehouse_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        warehouse_name TEXT NOT NULL,
-        location_id INTEGER NOT NULL,
-        capacity INTEGER NOT NULL,
-        available_space INTEGER NOT NULL,
-        manager_id INTEGER,
-        warehouse_type TEXT NOT NULL,
-        FOREIGN KEY (location_id) REFERENCES Locations(location_id),
-        FOREIGN KEY (manager_id) REFERENCES Employees(employee_id)
-    )
-''')
-
-
-conn.commit()
-
-
-conn.close()
-
-print("Database and tables created successfully!")
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
