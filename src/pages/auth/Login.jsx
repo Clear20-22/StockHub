@@ -51,7 +51,7 @@ const Login = () => {
       return;
     }
 
-    const result = await login(formData);
+    const result = await login(formData.username, formData.password);
     
     if (result.success) {
       navigate('/dashboard');
@@ -64,20 +64,20 @@ const Login = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [name]: value
-    });
+    }));
     
     // Clear field error when user starts typing
     if (fieldErrors[name]) {
-      setFieldErrors({
-        ...fieldErrors,
+      setFieldErrors(prev => ({
+        ...prev,
         [name]: ''
-      });
+      }));
     }
     
-    // Clear general error when user types
+    // Clear general error
     if (error) {
       setError('');
     }
@@ -88,7 +88,7 @@ const Login = () => {
   };
 
   const getFieldClasses = (fieldName) => {
-    const baseClasses = "appearance-none relative block w-full border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:z-10 shadow-sm transition-all duration-200";
+    const baseClasses = "appearance-none relative block w-full border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:z-10 transition-all duration-200 transform";
     const errorClasses = "border-red-300 focus:ring-red-500 focus:border-red-500 bg-red-50";
     const normalClasses = "border-gray-300 bg-white hover:bg-gray-50 focus:bg-white";
     
@@ -96,7 +96,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex pt-20">
       {/* Left side - Branding (hidden on mobile) */}
       <div className="hidden lg:flex lg:flex-1 lg:flex-col lg:justify-center lg:items-center bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white p-12 relative overflow-hidden">
         {/* Background decorations */}
@@ -182,7 +182,7 @@ const Login = () => {
             )}
 
             <div className="space-y-6">
-              {/* Username */}
+              {/* Username Field */}
               <div className="space-y-2">
                 <label htmlFor="username" className="block text-sm font-semibold text-gray-700">
                   Username <span className="text-red-500">*</span>
@@ -197,23 +197,17 @@ const Login = () => {
                     onChange={handleChange}
                     className={`${getFieldClasses('username')} pl-4 pr-4 py-3 text-sm hover:border-blue-300 focus:scale-[1.02]`}
                     placeholder="Enter your username"
-                    autoComplete="username"
                   />
-                  {!getFieldError('username') && formData.username && (
-                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                      <div className="h-2 w-2 bg-green-400 rounded-full"></div>
+                  {getFieldError('username') && (
+                    <div className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{getFieldError('username')}</span>
                     </div>
                   )}
                 </div>
-                {getFieldError('username') && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center animate-shake">
-                    <AlertCircle className="h-4 w-4 mr-1" />
-                    {getFieldError('username')}
-                  </p>
-                )}
               </div>
 
-              {/* Password */}
+              {/* Password Field */}
               <div className="space-y-2">
                 <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
                   Password <span className="text-red-500">*</span>
@@ -222,95 +216,74 @@ const Login = () => {
                   <input
                     id="password"
                     name="password"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     required
                     value={formData.password}
                     onChange={handleChange}
                     className={`${getFieldClasses('password')} pl-4 pr-12 py-3 text-sm hover:border-blue-300 focus:scale-[1.02]`}
                     placeholder="Enter your password"
-                    autoComplete="current-password"
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center hover:scale-110 transition-transform"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
                     onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      <EyeOff className="h-5 w-5" />
                     ) : (
-                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      <Eye className="h-5 w-5" />
                     )}
                   </button>
-                  {!getFieldError('password') && formData.password && (
-                    <div className="absolute inset-y-0 right-10 pr-3 flex items-center">
-                      <div className="h-2 w-2 bg-green-400 rounded-full"></div>
+                  {getFieldError('password') && (
+                    <div className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{getFieldError('password')}</span>
                     </div>
                   )}
                 </div>
-                {getFieldError('password') && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center animate-shake">
-                    <AlertCircle className="h-4 w-4 mr-1" />
-                    {getFieldError('password')}
-                  </p>
-                )}
+              </div>
+            </div>
+
+            {/* Demo Account Info */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-blue-800 mb-2">Demo Accounts</h3>
+              <div className="text-xs text-blue-700 space-y-1">
+                <div><strong>Admin:</strong> admin / admin123</div>
+                <div><strong>Employee:</strong> employee / emp123</div>
+                <div><strong>Customer:</strong> customer / cust123</div>
               </div>
             </div>
 
             {/* Submit Button */}
-            <div className="pt-4">
-              <button
-                type="submit"
-                disabled={loading}
-                className="group relative w-full flex justify-center py-4 px-6 border border-transparent text-sm font-bold rounded-xl text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transform transition-all duration-200 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]"
-              >
-                <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-                  {loading ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  ) : (
-                    <LogIn className="h-5 w-5 text-blue-300 group-hover:text-blue-200 transition-colors" />
-                  )}
-                </span>
-                {loading ? 'Signing in...' : 'Sign In'}
-              </button>
-            </div>
-
-            {/* Demo Accounts */}
-            <div className="pt-6 border-t border-gray-100">
-              <div className="text-center">
-                <div className="text-sm font-semibold text-gray-700 mb-4 flex items-center justify-center space-x-2">
-                  <UserPlus className="h-4 w-4 text-blue-600" />
-                  <span>Demo Accounts (for testing)</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200 hover:shadow-md transition-all duration-200 group">
-                    <div className="font-bold text-blue-700 mb-1 group-hover:text-blue-800">Admin</div>
-                    <div className="text-blue-600 font-mono bg-white/60 px-2 py-1 rounded">admin / admin123</div>
-                  </div>
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200 hover:shadow-md transition-all duration-200 group">
-                    <div className="font-bold text-green-700 mb-1 group-hover:text-green-800">Employee</div>
-                    <div className="text-green-600 font-mono bg-white/60 px-2 py-1 rounded">employee1 / emp123</div>
-                  </div>
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200 hover:shadow-md transition-all duration-200 group">
-                    <div className="font-bold text-purple-700 mb-1 group-hover:text-purple-800">Customer</div>
-                    <div className="text-purple-600 font-mono bg-white/60 px-2 py-1 rounded">customer1 / cust123</div>
-                  </div>
-                </div>
-                <p className="mt-3 text-xs text-gray-500">
-                  Click any account above to try the demo
-                </p>
-              </div>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-xl text-white transition-all duration-200 transform ${
+                loading
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl'
+              }`}
+            >
+              <span className="absolute left-0 inset-y-0 flex items-center pl-3">
+                {loading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  <LogIn className="h-5 w-5 text-blue-300 group-hover:text-blue-200 transition-colors" />
+                )}
+              </span>
+              {loading ? 'Signing in...' : 'Sign in'}
+            </button>
 
             {/* Register Link */}
-            <div className="text-center pt-4 border-t border-gray-100">
+            <div className="text-center">
               <p className="text-sm text-gray-600">
                 New to StockHub?{' '}
                 <Link
                   to="/register"
-                  className="font-semibold text-blue-600 hover:text-blue-500 transition-colors hover:underline"
+                  className="font-semibold text-blue-600 hover:text-blue-500 transition-colors inline-flex items-center space-x-1 hover:underline group"
                 >
-                  Create an account
+                  <span>Create an account</span>
+                  <UserPlus className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </p>
             </div>
