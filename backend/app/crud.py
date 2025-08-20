@@ -53,11 +53,17 @@ def delete_user(db: Session, user_id: int):
     return db_user
 
 def authenticate_user(db: Session, username: str, password: str):
+    print(f"[DEBUG] Authenticating user: {username}")
     user = get_user_by_username(db, username)
     if not user:
+        print(f"[DEBUG] User not found: {username}")
         return False
-    if not verify_password(password, user.hashed_password):
+    print(f"[DEBUG] User found: {user.username}, role: {user.role}")
+    password_valid = verify_password(password, user.hashed_password)
+    print(f"[DEBUG] Password verification result: {password_valid}")
+    if not password_valid:
         return False
+    print(f"[DEBUG] Authentication successful for user: {username}")
     return user
 
 # Goods CRUD
