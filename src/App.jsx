@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { NotificationProvider } from './contexts/NotificationContext'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import ScrollToTop from './components/common/ScrollToTop'
@@ -197,7 +198,9 @@ const AppWithScrolling = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <AppWithScrolling />
+      <NotificationProvider>
+        <AppWithScrolling />
+      </NotificationProvider>
     </AuthProvider>
   )
 }

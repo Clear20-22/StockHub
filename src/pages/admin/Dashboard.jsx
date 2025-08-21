@@ -10,10 +10,11 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import ManageUsers from './ManageUsers';
+import ManageGoods from './ManageGoods';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' or 'manage-users'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'manage-users', or 'manage-goods'
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalGoods: 0,
@@ -102,6 +103,11 @@ const AdminDashboard = () => {
     return <ManageUsers onBack={() => setCurrentView('dashboard')} />;
   }
 
+  // Render ManageGoods view
+  if (currentView === 'manage-goods') {
+    return <ManageGoods onBack={() => setCurrentView('dashboard')} />;
+  }
+
   return (
     <div className="min-h-screen py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -171,7 +177,10 @@ const AdminDashboard = () => {
                   <span className="text-blue-700 font-medium">Manage Users</span>
                 </div>
               </button>
-              <button className="w-full text-left p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors duration-200">
+              <button 
+                onClick={() => setCurrentView('manage-goods')}
+                className="w-full text-left p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors duration-200"
+              >
                 <div className="flex items-center">
                   <Package className="w-5 h-5 text-green-600 mr-3" />
                   <span className="text-green-700 font-medium">Manage Goods</span>
