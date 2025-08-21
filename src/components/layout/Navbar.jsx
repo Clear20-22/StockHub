@@ -78,9 +78,9 @@ const Navbar = () => {
     if (user?.role === 'admin') {
       return [
         ...baseItems,
-        { name: 'Users', path: '/admin/users', icon: Users },
-        { name: 'Goods', path: '/admin/goods', icon: Package },
-        { name: 'Branches', path: '/admin/branches', icon: Building },
+        { name: 'Manage Users', path: '/admin/manage-users', icon: Users },
+        { name: 'Manage Goods', path: '/admin/manage-goods', icon: Package },
+        { name: 'Manage Branches', path: '/admin/manage-branches', icon: Building },
         { name: 'Assignments', path: '/admin/assignments', icon: ClipboardList },
       ];
     }
@@ -170,6 +170,21 @@ const Navbar = () => {
                     </button>
                     <button 
                       onClick={() => navigate('/customer/settings')}
+                      className="p-2 text-blue-100 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10 rounded-lg transition-all duration-200"
+                    >
+                      <Settings className="h-5 w-5" />
+                    </button>
+                  </div>
+                )}
+                {/* Admin additional features */}
+                {user?.role === 'admin' && (
+                  <div className="flex items-center space-x-2">
+                    <button className="relative p-2 text-blue-100 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10 rounded-lg transition-all duration-200">
+                      <Bell className="h-5 w-5" />
+                      <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400 ring-2 ring-white/50"></span>
+                    </button>
+                    <button 
+                      onClick={() => navigate('/admin/settings')}
                       className="p-2 text-blue-100 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10 rounded-lg transition-all duration-200"
                     >
                       <Settings className="h-5 w-5" />
