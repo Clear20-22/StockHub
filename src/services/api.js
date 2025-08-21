@@ -63,6 +63,9 @@ export const goodsAPI = {
   createGood: (data) => api.post('/api/goods', data),
   updateGood: (id, data) => api.put(`/api/goods/${id}`, data),
   deleteGood: (id) => api.delete(`/api/goods/${id}`),
+  updateStock: (id, data) => api.put(`/api/goods/${id}/stock`, data),
+  exportGoods: (params = {}) => api.get('/api/goods/export', { params, responseType: 'blob' }),
+  importGoods: (data) => api.post('/api/goods/import', data),
 };
 
 // Branches API
