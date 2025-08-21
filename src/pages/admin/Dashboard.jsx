@@ -9,9 +9,11 @@ import {
   TrendingUp, 
   AlertCircle 
 } from 'lucide-react';
+import ManageUsers from './ManageUsers';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' or 'manage-users'
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalGoods: 0,
@@ -95,6 +97,11 @@ const AdminDashboard = () => {
     );
   }
 
+  // Render ManageUsers view
+  if (currentView === 'manage-users') {
+    return <ManageUsers onBack={() => setCurrentView('dashboard')} />;
+  }
+
   return (
     <div className="min-h-screen py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -155,7 +162,10 @@ const AdminDashboard = () => {
           <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
             <div className="space-y-3">
-              <button className="w-full text-left p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors duration-200">
+              <button 
+                onClick={() => setCurrentView('manage-users')}
+                className="w-full text-left p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors duration-200"
+              >
                 <div className="flex items-center">
                   <Users className="w-5 h-5 text-blue-600 mr-3" />
                   <span className="text-blue-700 font-medium">Manage Users</span>

@@ -1,14 +1,15 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import ManageUsers from './ManageUsers';
 
 const AdminUsers = () => {
-  return (
-    <div className="min-h-screen py-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8">User Management</h1>
-        <p>Admin user management will be here.</p>
-      </div>
-    </div>
-  );
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    navigate('/admin/dashboard');
+  };
+
+  return <ManageUsers onBack={handleBack} />;
 };
 
 export default AdminUsers;
