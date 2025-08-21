@@ -13,9 +13,7 @@ import './App.css'
 import Home from './pages/Home'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
-// import CustomerDashboard from './pages/customer/Dashboard'
-import CustomerDashboardNew from './pages/customer/DashboardNew'
-import CustomerDashboardStatic from './pages/customer/DashboardStatic'
+import CustomerDashboard from './pages/customer/Dashboard'
 import EmployeeDashboard from './pages/employee/Dashboard'
 import EmployeeGoods from './pages/employee/Goods'
 import EmployeeAssignments from './pages/employee/Assignments'
@@ -105,8 +103,6 @@ const AppWithScrolling = () => {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/test-dashboard" element={<CustomerDashboardStatic />} />
-          <Route path="/new-dashboard" element={<CustomerDashboardNew />} />
 
           {/* Protected routes */}
           <Route path="/dashboard" element={
@@ -121,7 +117,7 @@ const AppWithScrolling = () => {
               path="/customer/dashboard" 
               element={
                 <ProtectedRoute allowedRoles={['customer']}>
-                  <CustomerDashboardNew />
+                  <CustomerDashboard />
                 </ProtectedRoute>
               } 
             />          {/* Employee routes */}
