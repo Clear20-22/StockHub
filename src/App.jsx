@@ -26,6 +26,10 @@ import AdminUsers from './pages/admin/Users'
 import AdminGoods from './pages/admin/Goods'
 import AdminBranches from './pages/admin/Branches'
 import AdminAssignments from './pages/admin/Assignments'
+import AdminSettings from './pages/admin/AdminSettings'
+import ManageUsers from './pages/admin/ManageUsers'
+import ManageGoods from './pages/admin/ManageGoods'
+import ManageBranches from './pages/admin/ManageBranches'
 import ProtectedRoute from './components/ProtectedRoute'
 
 // Dashboard router component to redirect based on role
@@ -184,9 +188,19 @@ const AppWithScrolling = () => {
               <AdminUsers />
             </ProtectedRoute>
           } />
+          <Route path="/admin/manage-users" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <ManageUsers />
+            </ProtectedRoute>
+          } />
           <Route path="/admin/goods" element={
             <ProtectedRoute allowedRoles={['admin']}>
               <AdminGoods />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/manage-goods" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <ManageGoods />
             </ProtectedRoute>
           } />
           <Route path="/admin/branches" element={
@@ -194,9 +208,19 @@ const AppWithScrolling = () => {
               <AdminBranches />
             </ProtectedRoute>
           } />
+          <Route path="/admin/manage-branches" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <ManageBranches />
+            </ProtectedRoute>
+          } />
           <Route path="/admin/assignments" element={
             <ProtectedRoute allowedRoles={['admin']}>
               <AdminAssignments />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/settings" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminSettings />
             </ProtectedRoute>
           } />
 
