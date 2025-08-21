@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 import crud
 import schemas
-from database import get_db
+from database import get_db, Goods
 from auth_handler import decode_jwt
 
 router = APIRouter()
@@ -105,3 +105,60 @@ def get_dashboard_stats(
 ):
     """Get dashboard statistics (admin only)"""
     return crud.get_dashboard_stats(db)
+
+@router.get("/me/stats")
+def get_customer_stats(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Get current customer's statistics"""
+    if current_user.role != "customer":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only customers can access this endpoint"
+        )
+    
+    # Get customer's goods count
+    goods_count = db.query(Goods).filter(Goods.owner_id == current_user.id).count()
+    
+    # Mock data for now - you can implement real logic later
+    return {
+        "total_goods": goods_count,
+        "active_orders": 3,
+        "completed_orders": 18,
+        "warehouse_value": 15420
+    }
+
+@router.get("/me/activity")
+def get_customer_activity(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Get current customer's recent activity"""
+    if current_user.role != "customer":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only customers can access this endpoint"
+        )
+    
+    # Mock activity data - implement real logic based on your needs
+    activity = [
+        {
+            "id": 1,
+            "type": "order_created",
+            "title": "New storage order created",
+            "description": f"Order for {current_user.first_name}'s goods storage",
+            "timestamp": "2024-08-21T10:30:00Z",
+            "status": "pending"
+        },
+        {
+            "id": 2,
+            "type": "goods_delivered",
+            "title": "Goods delivered to warehouse",
+            "description": "Items delivered to Warehouse Branch A",
+            "timestamp": "2024-08-20T14:15:00Z",
+            "status": "completed"
+        }
+    ]
+    
+    return activity
