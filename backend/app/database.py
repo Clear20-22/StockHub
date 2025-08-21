@@ -25,11 +25,14 @@ class User(Base):
     phone = Column(String)
     address = Column(Text)
     is_active = Column(Boolean, default=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True)
+    last_login = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
     goods = relationship("Goods", back_populates="owner")
     assignments = relationship("Assignment", back_populates="employee")
+    branch = relationship("Branch", back_populates="users", foreign_keys=[branch_id])
 
 class Goods(Base):
     __tablename__ = "goods"
@@ -65,6 +68,7 @@ class Branch(Base):
     # Relationships
     manager = relationship("User", foreign_keys=[manager_id])
     goods = relationship("Goods", back_populates="branch")
+    users = relationship("User", back_populates="branch", foreign_keys="User.branch_id")
     assignments = relationship("Assignment", back_populates="branch")
 
 class Assignment(Base):
@@ -84,6 +88,21 @@ class Assignment(Base):
     # Relationships
     employee = relationship("User", back_populates="assignments")
     branch = relationship("Branch", back_populates="assignments")
+
+class UserActivity(Base):
+    __tablename__ = "user_activities"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(String, nullable=False)  # Login, Profile Update, etc.
+    description = Column(Text, nullable=True)
+    category = Column(String, nullable=True)  # auth, profile, goods, assignment, etc.
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User")
 
 def get_db():
     db = SessionLocal()

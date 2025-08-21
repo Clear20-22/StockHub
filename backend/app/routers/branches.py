@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List
-import crud
-import schemas
-from database import get_db
-from auth_handler import decode_jwt
+from app import crud
+from app import schemas
+from app.database import get_db
+from app.auth_handler import decode_jwt
 
 router = APIRouter()
 security = HTTPBearer()

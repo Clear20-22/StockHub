@@ -10,6 +10,7 @@ class UserBase(BaseModel):
     last_name: str
     phone: Optional[str] = None
     address: Optional[str] = None
+    branch_id: Optional[int] = None
 
 class UserCreate(UserBase):
     password: str
@@ -22,11 +23,13 @@ class UserUpdate(BaseModel):
     address: Optional[str] = None
     role: Optional[str] = None
     is_active: Optional[bool] = None
+    branch_id: Optional[int] = None
 
 class User(UserBase):
     id: int
     role: str
     is_active: bool
+    last_login: Optional[datetime] = None
     created_at: datetime
     
     class Config:
@@ -41,6 +44,25 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     user: User
+
+# User Activity Schemas
+class UserActivityBase(BaseModel):
+    action: str
+    description: Optional[str] = None
+    category: Optional[str] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+
+class UserActivityCreate(UserActivityBase):
+    user_id: int
+
+class UserActivity(UserActivityBase):
+    id: int
+    user_id: int
+    timestamp: datetime
+    
+    class Config:
+        from_attributes = True
 
 # Goods Schemas
 class GoodsBase(BaseModel):

@@ -6,6 +6,7 @@ import { X, User, Mail, Shield, Building2, Save } from 'lucide-react';
 const UserModal = ({ user, branches, mode, onClose, onSave }) => {
   const { success, error } = useNotification();
   const [formData, setFormData] = useState({
+    username: '',
     first_name: '',
     last_name: '',
     email: '',
@@ -21,6 +22,7 @@ const UserModal = ({ user, branches, mode, onClose, onSave }) => {
   useEffect(() => {
     if (user && mode === 'edit') {
       setFormData({
+        username: user.username || '',
         first_name: user.first_name || '',
         last_name: user.last_name || '',
         email: user.email || '',
@@ -37,6 +39,10 @@ const UserModal = ({ user, branches, mode, onClose, onSave }) => {
     const newErrors = {};
 
     // Required fields
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username is required';
+    }
+
     if (!formData.first_name.trim()) {
       newErrors.first_name = 'First name is required';
     }
@@ -99,6 +105,7 @@ const UserModal = ({ user, branches, mode, onClose, onSave }) => {
     
     try {
       const submitData = {
+        username: formData.username.trim(),
         first_name: formData.first_name.trim(),
         last_name: formData.last_name.trim(),
         email: formData.email.trim(),
@@ -198,6 +205,30 @@ const UserModal = ({ user, branches, mode, onClose, onSave }) => {
               <p className="text-red-700 text-sm">{errors.submit}</p>
             </div>
           )}
+
+          {/* Username */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Username *
+            </label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleInputChange}
+                disabled={mode === 'edit'} // Username cannot be changed after creation
+                className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  errors.username ? 'border-red-500' : 'border-gray-300'
+                } ${mode === 'edit' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                placeholder="username"
+              />
+            </div>
+            {errors.username && (
+              <p className="text-red-500 text-xs mt-1">{errors.username}</p>
+            )}
+          </div>
 
           {/* Name Fields */}
           <div className="grid grid-cols-2 gap-4">

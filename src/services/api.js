@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'http://localhost:8001';
 
 // Create axios instance
 const api = axios.create({
@@ -51,6 +51,7 @@ export const usersAPI = {
   updateUser: (id, data) => api.put(`/api/users/${id}`, data),
   updateMe: (data) => api.put('/api/users/me', data),
   deleteUser: (id) => api.delete(`/api/users/${id}`),
+  getUserActivities: (id, params = {}) => api.get(`/api/users/${id}/activities`, { params }),
   getDashboardStats: () => api.get('/api/users/dashboard/stats'),
 };
 

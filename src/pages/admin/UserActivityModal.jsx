@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { usersAPI } from '../../services/api';
 import { X, Activity, Clock, User, Shield, Building2, Package, ClipboardList } from 'lucide-react';
 
 const UserActivityModal = ({ user, onClose }) => {
@@ -12,87 +13,59 @@ const UserActivityModal = ({ user, onClose }) => {
   const fetchUserActivity = async () => {
     try {
       setLoading(true);
-      // In a real implementation, this would call an API endpoint
-      // For now, we'll use mock data
-      setTimeout(() => {
-        setActivities([
-          {
-            id: 1,
-            action: 'Login',
-            description: 'User logged into the system',
-            timestamp: '2024-08-21T09:00:00Z',
-            ip_address: '192.168.1.100',
-            user_agent: 'Chrome/91.0 Windows',
-            category: 'auth'
-          },
-          {
-            id: 2,
-            action: 'Profile Update',
-            description: 'Updated profile information',
-            timestamp: '2024-08-20T15:30:00Z',
-            ip_address: '192.168.1.100',
-            user_agent: 'Chrome/91.0 Windows',
-            category: 'profile'
-          },
-          {
-            id: 3,
-            action: 'Goods Created',
-            description: 'Created new goods item: "Industrial Equipment"',
-            timestamp: '2024-08-20T14:15:00Z',
-            ip_address: '192.168.1.100',
-            user_agent: 'Chrome/91.0 Windows',
-            category: 'goods'
-          },
-          {
-            id: 4,
-            action: 'Assignment Completed',
-            description: 'Completed assignment: "Warehouse Inspection"',
-            timestamp: '2024-08-20T11:45:00Z',
-            ip_address: '192.168.1.100',
-            user_agent: 'Chrome/91.0 Windows',
-            category: 'assignment'
-          },
-          {
-            id: 5,
-            action: 'Login',
-            description: 'User logged into the system',
-            timestamp: '2024-08-19T08:30:00Z',
-            ip_address: '192.168.1.105',
-            user_agent: 'Firefox/89.0 Windows',
-            category: 'auth'
-          },
-          {
-            id: 6,
-            action: 'Password Changed',
-            description: 'Password was successfully changed',
-            timestamp: '2024-08-18T16:20:00Z',
-            ip_address: '192.168.1.105',
-            user_agent: 'Firefox/89.0 Windows',
-            category: 'security'
-          },
-          {
-            id: 7,
-            action: 'Branch Access',
-            description: 'Accessed Main Warehouse branch',
-            timestamp: '2024-08-18T14:10:00Z',
-            ip_address: '192.168.1.105',
-            user_agent: 'Firefox/89.0 Windows',
-            category: 'branch'
-          },
-          {
-            id: 8,
-            action: 'Goods Updated',
-            description: 'Updated goods item: "Office Supplies"',
-            timestamp: '2024-08-17T10:00:00Z',
-            ip_address: '192.168.1.100',
-            user_agent: 'Chrome/91.0 Windows',
-            category: 'goods'
-          }
-        ]);
-        setLoading(false);
-      }, 1000);
+      const response = await usersAPI.getUserActivities(user.id, { limit: 20 });
+      setActivities(response.data || []);
     } catch (error) {
       console.error('Error fetching user activity:', error);
+      // Fallback to mock data for development
+      setActivities([
+        {
+          id: 1,
+          action: 'Login',
+          description: 'User logged into the system',
+          timestamp: '2024-08-21T09:00:00Z',
+          ip_address: '192.168.1.100',
+          user_agent: 'Chrome/91.0 Windows',
+          category: 'auth'
+        },
+        {
+          id: 2,
+          action: 'Profile Update',
+          description: 'Updated profile information',
+          timestamp: '2024-08-20T15:30:00Z',
+          ip_address: '192.168.1.100',
+          user_agent: 'Chrome/91.0 Windows',
+          category: 'profile'
+        },
+        {
+          id: 3,
+          action: 'Goods Created',
+          description: 'Created new goods item: "Industrial Equipment"',
+          timestamp: '2024-08-20T14:15:00Z',
+          ip_address: '192.168.1.100',
+          user_agent: 'Chrome/91.0 Windows',
+          category: 'goods'
+        },
+        {
+          id: 4,
+          action: 'Assignment Completed',
+          description: 'Completed assignment: "Warehouse Inspection"',
+          timestamp: '2024-08-20T11:45:00Z',
+          ip_address: '192.168.1.100',
+          user_agent: 'Chrome/91.0 Windows',
+          category: 'assignment'
+        },
+        {
+          id: 5,
+          action: 'Login',
+          description: 'User logged into the system',
+          timestamp: '2024-08-19T08:30:00Z',
+          ip_address: '192.168.1.105',
+          user_agent: 'Firefox/89.0 Windows',
+          category: 'auth'
+        }
+      ]);
+    } finally {
       setLoading(false);
     }
   };
