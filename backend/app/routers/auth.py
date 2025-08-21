@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from datetime import timedelta
-import crud
-import schemas
-from database import get_db
-from auth_handler import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from app import crud
+from app import schemas
+from app.database import get_db
+from app.auth_handler import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 
 router = APIRouter()
 security = HTTPBearer()
@@ -36,6 +36,7 @@ def register_user(
 @router.post("/login", response_model=schemas.Token)
 def login_user(
     user_credentials: schemas.UserLogin,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """Login user and return access token"""
@@ -46,6 +47,20 @@ def login_user(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    # Update last login
+    crud.update_user_last_login(db, user.id)
+    
+    # Log login activity
+    crud.log_user_activity(
+        db=db,
+        user_id=user.id,
+        action="Login",
+        description="User logged into the system",
+        category="auth",
+        ip_address=request.client.host,
+        user_agent=request.headers.get("user-agent")
+    )
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(

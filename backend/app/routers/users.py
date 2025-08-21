@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List
-import crud
-import schemas
-from database import get_db
-from auth_handler import decode_jwt
+from app import crud
+from app import schemas
+from app.database import get_db
+from app.auth_handler import decode_jwt
 
 router = APIRouter()
 security = HTTPBearer()
@@ -59,6 +59,42 @@ def read_user(
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
+@router.post("/", response_model=schemas.User)
+def create_user(
+    user: schemas.UserCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin)
+):
+    """Create new user (admin only)"""
+    # Check if user already exists
+    if crud.get_user_by_username(db, username=user.username):
+        raise HTTPException(
+            status_code=400,
+            detail="Username already registered"
+        )
+    if crud.get_user_by_email(db, email=user.email):
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
+    
+    # Create user
+    db_user = crud.create_user(db=db, user=user)
+    
+    # Log activity
+    crud.log_user_activity(
+        db=db,
+        user_id=current_user.id,
+        action="User Created",
+        description=f"Created new user: {user.username} ({user.email})",
+        category="user_management",
+        ip_address=request.client.host,
+        user_agent=request.headers.get("user-agent")
+    )
+    
+    return db_user
+
 @router.put("/me", response_model=schemas.User)
 def update_user_me(
     user_update: schemas.UserUpdate,
@@ -73,6 +109,7 @@ def update_user_me(
 def update_user(
     user_id: int,
     user_update: schemas.UserUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user = Depends(require_admin)
 ):
@@ -82,11 +119,24 @@ def update_user(
         raise HTTPException(status_code=404, detail="User not found")
     
     updated_user = crud.update_user(db, user_id, user_update)
+    
+    # Log activity
+    crud.log_user_activity(
+        db=db,
+        user_id=current_user.id,
+        action="User Updated",
+        description=f"Updated user: {db_user.username} ({db_user.email})",
+        category="user_management",
+        ip_address=request.client.host,
+        user_agent=request.headers.get("user-agent")
+    )
+    
     return updated_user
 
 @router.delete("/{user_id}")
 def delete_user(
     user_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user = Depends(require_admin)
 ):
@@ -94,6 +144,17 @@ def delete_user(
     db_user = crud.get_user(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Log activity before deletion
+    crud.log_user_activity(
+        db=db,
+        user_id=current_user.id,
+        action="User Deleted",
+        description=f"Deleted user: {db_user.username} ({db_user.email})",
+        category="user_management",
+        ip_address=request.client.host,
+        user_agent=request.headers.get("user-agent")
+    )
     
     crud.delete_user(db, user_id)
     return {"message": "User deleted successfully"}
@@ -105,3 +166,20 @@ def get_dashboard_stats(
 ):
     """Get dashboard statistics (admin only)"""
     return crud.get_dashboard_stats(db)
+
+@router.get("/{user_id}/activities", response_model=List[schemas.UserActivity])
+def get_user_activities(
+    user_id: int,
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin)
+):
+    """Get user activity logs (admin only)"""
+    # Verify user exists
+    db_user = crud.get_user(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    activities = crud.get_user_activities(db, user_id=user_id, skip=skip, limit=limit)
+    return activities

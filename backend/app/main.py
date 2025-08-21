@@ -7,8 +7,8 @@ import os
 # Add the app directory to the Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from database import engine, Base
-from routers import auth, users, goods, branches, assignments
+from app.database import engine, Base
+from app.routers import auth, users, goods, branches, assignments
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

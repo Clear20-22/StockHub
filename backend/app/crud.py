@@ -1,9 +1,10 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from database import User, Goods, Branch, Assignment
-from schemas import UserCreate, UserUpdate, GoodsCreate, GoodsUpdate, BranchCreate, BranchUpdate, AssignmentCreate, AssignmentUpdate
-from auth_handler import get_password_hash, verify_password
+from app.database import User, Goods, Branch, Assignment, UserActivity
+from app.schemas import UserCreate, UserUpdate, GoodsCreate, GoodsUpdate, BranchCreate, BranchUpdate, AssignmentCreate, AssignmentUpdate, UserActivityCreate
+from app.auth_handler import get_password_hash, verify_password
 from typing import Optional, List
+from datetime import datetime
 
 # User CRUD
 def get_user(db: Session, user_id: int):
@@ -28,7 +29,8 @@ def create_user(db: Session, user: UserCreate):
         first_name=user.first_name,
         last_name=user.last_name,
         phone=user.phone,
-        address=user.address
+        address=user.address,
+        branch_id=user.branch_id
     )
     db.add(db_user)
     db.commit()
@@ -185,3 +187,33 @@ def get_dashboard_stats(db: Session):
         "total_assignments": total_assignments,
         "pending_assignments": pending_assignments
     }
+
+# User Activity CRUD
+def create_user_activity(db: Session, activity: UserActivityCreate):
+    db_activity = UserActivity(**activity.dict())
+    db.add(db_activity)
+    db.commit()
+    db.refresh(db_activity)
+    return db_activity
+
+def get_user_activities(db: Session, user_id: int, skip: int = 0, limit: int = 50):
+    return db.query(UserActivity).filter(UserActivity.user_id == user_id).order_by(UserActivity.timestamp.desc()).offset(skip).limit(limit).all()
+
+def log_user_activity(db: Session, user_id: int, action: str, description: str = None, category: str = None, ip_address: str = None, user_agent: str = None):
+    activity = UserActivityCreate(
+        user_id=user_id,
+        action=action,
+        description=description,
+        category=category,
+        ip_address=ip_address,
+        user_agent=user_agent
+    )
+    return create_user_activity(db, activity)
+
+def update_user_last_login(db: Session, user_id: int):
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if db_user:
+        db_user.last_login = datetime.utcnow()
+        db.commit()
+        db.refresh(db_user)
+    return db_user
