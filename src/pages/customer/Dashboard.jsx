@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Package,
   Clock,
@@ -7,14 +8,13 @@ import {
   Eye,
   Filter,
   ChevronRight,
-  Bell,
-  Settings,
   LogOut,
   User
 } from 'lucide-react';
 import { authAPI, goodsAPI } from '../../services/api';
 
 const CustomerDashboard = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState({
     name: 'John Smith',
@@ -22,7 +22,6 @@ const CustomerDashboard = () => {
   });
   const [customerGoods, setCustomerGoods] = useState([]);
   const [goodsLoading, setGoodsLoading] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Customer data with API fetched info
   const customerData = {
@@ -44,7 +43,7 @@ const CustomerDashboard = () => {
           
           setUserInfo({
             name: userData.username || 'Customer',
-            email: userData.email || 'customer@stockhub.com'
+            email: userData.email || 'You don\'t have an email'
           });
         }
       } catch (error) {
@@ -133,26 +132,6 @@ const CustomerDashboard = () => {
     window.location.href = '/login';
   };
 
-  const handleStoreGoods = () => {
-    // Navigate to store goods page or open modal
-    alert('Store Goods functionality - Navigate to goods storage form');
-  };
-
-  const handleBranchCapacity = () => {
-    // Navigate to branch capacity page or show capacity info
-    alert('Branch Capacity functionality - Show available warehouse space');
-  };
-
-  const handleApplyToStore = () => {
-    // Navigate to application form or open modal
-    alert('Apply to Store functionality - Open storage application form');
-  };
-
-  const handleDashboard = () => {
-    // Navigate to dashboard or refresh current view
-    window.location.reload();
-  };
-
   const StatCard = ({ title, value, icon: Icon, color, loading }) => (
     <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
       <div className="flex items-center justify-between">
@@ -175,129 +154,8 @@ const CustomerDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      {/* Navbar */}
-      <nav className="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo and Brand */}
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <h1 className="text-2xl font-bold text-blue-600">StockHub</h1>
-              </div>
-              <div className="hidden md:block ml-10">
-                <button 
-                  onClick={handleDashboard}
-                  className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors duration-200"
-                >
-                  <User className="mr-2 h-4 w-4" />
-                  Dashboard
-                </button>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="hidden md:flex items-center space-x-3 flex-1 justify-center">
-              <button 
-                onClick={handleStoreGoods}
-                className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-sm"
-              >
-                <Package className="mr-2 h-4 w-4" />
-                Store Goods
-              </button>
-              <button 
-                onClick={handleBranchCapacity}
-                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 shadow-sm"
-              >
-                <TrendingUp className="mr-2 h-4 w-4" />
-                Branch Capacity
-              </button>
-              <button 
-                onClick={handleApplyToStore}
-                className="flex items-center px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors duration-200 shadow-sm"
-              >
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Apply to Store
-              </button>
-            </div>
-
-            {/* Mobile Action Menu */}
-            <div className="md:hidden relative">
-              <button 
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-              >
-                <Package className="h-6 w-6" />
-              </button>
-              
-              {/* Mobile Dropdown Menu */}
-              {mobileMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                  <button 
-                    onClick={() => { handleStoreGoods(); setMobileMenuOpen(false); }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center"
-                  >
-                    <Package className="mr-2 h-4 w-4" />
-                    Store Goods
-                  </button>
-                  <button 
-                    onClick={() => { handleBranchCapacity(); setMobileMenuOpen(false); }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center"
-                  >
-                    <TrendingUp className="mr-2 h-4 w-4" />
-                    Branch Capacity
-                  </button>
-                  <button 
-                    onClick={() => { handleApplyToStore(); setMobileMenuOpen(false); }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center"
-                  >
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Apply to Store
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Right side - Profile and Actions */}
-            <div className="flex items-center space-x-4">
-              {/* Notifications */}
-              <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-200">
-                <Bell className="h-6 w-6" />
-                <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400 ring-2 ring-white"></span>
-              </button>
-
-              {/* Settings */}
-              <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-200">
-                <Settings className="h-6 w-6" />
-              </button>
-
-              {/* Profile Dropdown */}
-              <div className="relative flex items-center space-x-3 bg-gray-50 rounded-lg p-2 hover:bg-gray-100 transition-colors duration-200 cursor-pointer">
-                <img
-                  src={customerData.avatar}
-                  alt="Profile"
-                  className="h-8 w-8 rounded-full object-cover border-2 border-blue-200"
-                />
-                <div className="hidden sm:block">
-                  <p className="text-sm font-medium text-gray-900">{customerData.name}</p>
-                  <p className="text-xs text-gray-500">Customer</p>
-                </div>
-              </div>
-
-              {/* Logout */}
-              <button 
-                onClick={handleLogout}
-                className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                title="Logout"
-              >
-                <LogOut className="h-6 w-6" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
       {/* Main Content */}
-      <div className="px-4 sm:px-6 lg:px-8 py-8">
+      <div className="px-4 sm:px-6 lg:px-8 py-8 mt-20">{/* Add margin-top to account for fixed navbar */}
         <div className="max-w-7xl mx-auto space-y-8">
           
           {/* Customer Profile Card - Positioned below navbar */}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Package, Users, Building, ClipboardList, LogOut, User, Menu, X } from 'lucide-react';
+import { Package, Users, Building, ClipboardList, LogOut, User, Menu, X, TrendingUp, CheckCircle, Bell, Settings } from 'lucide-react';
 import { smoothScrollToElement } from '../../utils/smoothScroll';
 
 const Navbar = () => {
@@ -96,8 +96,9 @@ const Navbar = () => {
     if (user?.role === 'customer') {
       return [
         ...baseItems,
-        { name: 'My Goods', path: '/customer/goods', icon: Package },
-        { name: 'Branches', path: '/branches', icon: Building },
+        { name: 'Store Goods', path: '/customer/store-goods', icon: Package },
+        { name: 'Branch Capacity', path: '/customer/branch-capacity', icon: TrendingUp },
+        { name: 'Apply to Store', path: '/customer/apply-to-store', icon: CheckCircle },
       ];
     }
 
@@ -160,6 +161,21 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
               <div className="flex items-center space-x-4">
+                {/* Customer additional features */}
+                {user?.role === 'customer' && (
+                  <div className="flex items-center space-x-2">
+                    <button className="relative p-2 text-blue-100 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10 rounded-lg transition-all duration-200">
+                      <Bell className="h-5 w-5" />
+                      <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400 ring-2 ring-white/50"></span>
+                    </button>
+                    <button 
+                      onClick={() => navigate('/customer/settings')}
+                      className="p-2 text-blue-100 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10 rounded-lg transition-all duration-200"
+                    >
+                      <Settings className="h-5 w-5" />
+                    </button>
+                  </div>
+                )}
                 <div className="flex items-center space-x-3 bg-gradient-to-r from-white/15 to-white/10 px-4 py-2.5 rounded-xl backdrop-blur-sm border border-white/20 shadow-lg">
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full blur-sm opacity-60"></div>

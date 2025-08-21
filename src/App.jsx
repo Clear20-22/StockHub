@@ -14,6 +14,10 @@ import Home from './pages/Home'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import CustomerDashboard from './pages/customer/Dashboard'
+import StoreGoods from './pages/customer/StoreGoods'
+import BranchCapacity from './pages/customer/BranchCapacity'
+import ApplyToStore from './pages/customer/ApplyToStore'
+import CustomerSettings from './pages/customer/CustomerSettings'
 import EmployeeDashboard from './pages/employee/Dashboard'
 import EmployeeGoods from './pages/employee/Goods'
 import EmployeeAssignments from './pages/employee/Assignments'
@@ -118,6 +122,38 @@ const AppWithScrolling = () => {
               element={
                 <ProtectedRoute allowedRoles={['customer']}>
                   <CustomerDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/customer/store-goods" 
+              element={
+                <ProtectedRoute allowedRoles={['customer']}>
+                  <StoreGoods />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/customer/branch-capacity" 
+              element={
+                <ProtectedRoute allowedRoles={['customer']}>
+                  <BranchCapacity />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/customer/apply-to-store" 
+              element={
+                <ProtectedRoute allowedRoles={['customer']}>
+                  <ApplyToStore />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/customer/settings" 
+              element={
+                <ProtectedRoute allowedRoles={['customer']}>
+                  <CustomerSettings />
                 </ProtectedRoute>
               } 
             />          {/* Employee routes */}
