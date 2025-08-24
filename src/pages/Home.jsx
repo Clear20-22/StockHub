@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Shield, Clock, Users, ArrowRight, ChevronDown, Mail, Phone, MapPin, Send, Building2, Target, Heart, Award } from 'lucide-react';
+import { Package, Shield, Clock, Users, ArrowRight, ChevronDown, Mail, Phone, MapPin, Send, Building2, Target, Heart, Award, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useSmoothScrollToSection } from '../hooks/useSmoothScroll';
+import { branchAPI } from '../services/branches';
 import warehouseImage from '../assets/wearhouse profile.webp';
 
 const Home = () => {
@@ -14,6 +15,31 @@ const Home = () => {
     subject: '',
     message: ''
   });
+
+  // Branches state
+  const [branches, setBranches] = useState([]);
+  const [branchesLoading, setBranchesLoading] = useState(true);
+  const [branchesError, setBranchesError] = useState(null);
+
+  useEffect(() => {
+    fetchBranches();
+  }, []);
+
+  const fetchBranches = async () => {
+    try {
+      setBranchesLoading(true);
+      setBranchesError(null);
+      const branchesData = await branchAPI.getAllBranches();
+      setBranches(branchesData);
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+      setBranchesError('Failed to load branches');
+      // Fallback to empty array
+      setBranches([]);
+    } finally {
+      setBranchesLoading(false);
+    }
+  };
 
   const features = [
     {
@@ -35,41 +61,6 @@ const Home = () => {
       icon: Users,
       title: 'Expert Team',
       description: 'Professional staff dedicated to managing your warehouse needs'
-    }
-  ];
-
-  const branches = [
-    {
-      name: 'Downtown Warehouse',
-      address: '123 Industrial Ave, Downtown',
-      phone: '+1 (555) 123-4567',
-      email: 'downtown@stockhub.com',
-      capacity: '10,000 sq ft',
-      specialization: 'General Storage'
-    },
-    {
-      name: 'Port District Hub',
-      address: '456 Harbor Blvd, Port District',
-      phone: '+1 (555) 234-5678',
-      email: 'port@stockhub.com',
-      capacity: '25,000 sq ft',
-      specialization: 'Import/Export'
-    },
-    {
-      name: 'Tech Valley Center',
-      address: '789 Innovation Dr, Tech Valley',
-      phone: '+1 (555) 345-6789',
-      email: 'tech@stockhub.com',
-      capacity: '15,000 sq ft',
-      specialization: 'Electronics & Tech'
-    },
-    {
-      name: 'Industrial Zone',
-      address: '321 Manufacturing Rd, Industrial Zone',
-      phone: '+1 (555) 456-7890',
-      email: 'industrial@stockhub.com',
-      capacity: '35,000 sq ft',
-      specialization: 'Heavy Equipment'
     }
   ];
 
@@ -254,44 +245,123 @@ const Home = () => {
             <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
               Strategically located warehouses to serve you better
             </p>
+            {branchesError && (
+              <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-center max-w-md mx-auto">
+                <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
+                <p className="text-red-700">{branchesError}</p>
+                <button 
+                  onClick={fetchBranches}
+                  className="ml-3 text-red-600 hover:text-red-800 font-medium"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {branches.map((branch, index) => (
-              <div key={branch.name} className="bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border border-blue-100 group">
-                <div className="bg-gradient-to-br from-blue-500 to-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
-                  <Building2 className="h-8 w-8 text-white" />
+          {branchesLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="bg-white rounded-3xl p-8 shadow-xl animate-pulse">
+                  <div className="w-16 h-16 bg-gray-200 rounded-2xl mx-auto mb-6"></div>
+                  <div className="h-6 bg-gray-200 rounded mb-4"></div>
+                  <div className="space-y-3">
+                    <div className="h-4 bg-gray-200 rounded"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                  </div>
                 </div>
-                
-                <h3 className="text-xl font-bold text-gray-900 mb-4 text-center group-hover:text-blue-800 transition-colors">
-                  {branch.name}
-                </h3>
-                
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-start space-x-3">
-                    <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-600">{branch.address}</span>
+              ))}
+            </div>
+          ) : branches.length === 0 ? (
+            <div className="text-center py-16">
+              <Building2 className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+              <h3 className="text-xl font-medium text-gray-900 mb-2">No branches available</h3>
+              <p className="text-gray-600 mb-6">
+                {branchesError ? 'Unable to load branches at this time.' : 'We are expanding our network. Check back soon!'}
+              </p>
+              <button
+                onClick={fetchBranches}
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {branches.map((branch, index) => (
+                <div key={branch.id || index} className="bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border border-blue-100 group">
+                  <div className="bg-gradient-to-br from-blue-500 to-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
+                    <Building2 className="h-8 w-8 text-white" />
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Phone className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                    <span className="text-gray-600">{branch.phone}</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                    <span className="text-gray-600">{branch.email}</span>
-                  </div>
-                  <div className="pt-3 border-t border-gray-100">
-                    <div className="text-center">
-                      <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold mb-2">
-                        {branch.capacity}
-                      </span>
-                      <p className="text-gray-700 font-medium">{branch.specialization}</p>
+                  
+                  <h3 className="text-xl font-bold text-gray-900 mb-4 text-center group-hover:text-blue-800 transition-colors">
+                    {branch.name || 'Unnamed Branch'}
+                  </h3>
+                  
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-start space-x-3">
+                      <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <span className="text-gray-600">{branch.location || 'Location not specified'}</span>
+                    </div>
+                    
+                    {branch.description && (
+                      <div className="flex items-start space-x-3">
+                        <Package className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <span className="text-gray-600">{branch.description}</span>
+                      </div>
+                    )}
+                    
+                    <div className="pt-3 border-t border-gray-100">
+                      <div className="text-center space-y-2">
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="bg-blue-50 px-2 py-1 rounded-full">
+                            <span className="text-blue-700 font-semibold">Capacity</span>
+                            <p className="text-blue-600">{(branch.capacity || 0).toLocaleString()}</p>
+                          </div>
+                          <div className="bg-green-50 px-2 py-1 rounded-full">
+                            <span className="text-green-700 font-semibold">Available</span>
+                            <p className="text-green-600">{(branch.available_space || 0).toLocaleString()}</p>
+                          </div>
+                        </div>
+                        
+                        {/* Capacity Status */}
+                        <div className="pt-2">
+                          {(() => {
+                            const capacity = branch.capacity || 0;
+                            const available = branch.available_space || 0;
+                            const used = capacity - available;
+                            const percentage = capacity > 0 ? Math.round((used / capacity) * 100) : 0;
+                            
+                            let statusColor = 'bg-green-100 text-green-800';
+                            let statusText = 'Available';
+                            
+                            if (percentage >= 90) {
+                              statusColor = 'bg-red-100 text-red-800';
+                              statusText = 'Nearly Full';
+                            } else if (percentage >= 70) {
+                              statusColor = 'bg-orange-100 text-orange-800';
+                              statusText = 'Busy';
+                            } else if (percentage >= 50) {
+                              statusColor = 'bg-blue-100 text-blue-800';
+                              statusText = 'Active';
+                            }
+                            
+                            return (
+                              <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${statusColor}`}>
+                                {statusText} ({percentage}%)
+                              </span>
+                            );
+                          })()}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
