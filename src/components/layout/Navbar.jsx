@@ -78,9 +78,9 @@ const Navbar = () => {
     if (user?.role === 'admin') {
       return [
         ...baseItems,
-        { name: 'Manage Users', path: '/admin/manage-users', icon: Users },
-        { name: 'Manage Goods', path: '/admin/manage-goods', icon: Package },
-        { name: 'Manage Branches', path: '/admin/manage-branches', icon: Building },
+        { name: 'Users', path: '/admin/manage-users', icon: Users },
+        { name: 'Goods', path: '/admin/manage-goods', icon: Package },
+        { name: 'Branches', path: '/admin/manage-branches', icon: Building },
         { name: 'Assignments', path: '/admin/assignments', icon: ClipboardList },
       ];
     }

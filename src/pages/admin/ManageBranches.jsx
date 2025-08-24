@@ -103,6 +103,17 @@ const ManageBranches = () => {
   const handleAddBranch = async () => {
     setActionLoading(true);
     try {
+      // Validation
+      if (!newBranch.name || !newBranch.location || !newBranch.capacity) {
+        setError('Please fill in all required fields.');
+        return;
+      }
+
+      if (newBranch.available_space && parseInt(newBranch.available_space) > parseInt(newBranch.capacity)) {
+        setError('Available space cannot be greater than total capacity.');
+        return;
+      }
+
       const branchData = {
         name: newBranch.name,
         location: newBranch.location,
@@ -114,19 +125,25 @@ const ManageBranches = () => {
       await branchAPI.createBranch(branchData);
       await fetchBranches(); // Refresh the list
       setShowAddModal(false);
-      setNewBranch({
-        name: '',
-        location: '',
-        description: '',
-        capacity: '',
-        available_space: ''
-      });
+      resetNewBranchForm();
+      setError('✅ Branch added successfully');
+      setTimeout(() => setError(null), 3000);
     } catch (error) {
       console.error('Error adding branch:', error);
       setError('Failed to add branch. Please try again.');
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const resetNewBranchForm = () => {
+    setNewBranch({
+      name: '',
+      location: '',
+      description: '',
+      capacity: '',
+      available_space: ''
+    });
   };
 
   const handleEditBranch = async () => {
@@ -136,6 +153,8 @@ const ManageBranches = () => {
       await fetchBranches(); // Refresh the list
       setShowEditModal(false);
       setSelectedBranch(null);
+      setError('✅ Branch updated successfully');
+      setTimeout(() => setError(null), 3000);
     } catch (error) {
       console.error('Error updating branch:', error);
       setError('Failed to update branch. Please try again.');
@@ -150,6 +169,8 @@ const ManageBranches = () => {
       try {
         await branchAPI.deleteBranch(branchId);
         await fetchBranches(); // Refresh the list
+        setError('✅ Branch deleted successfully');
+        setTimeout(() => setError(null), 3000);
       } catch (error) {
         console.error('Error deleting branch:', error);
         setError('Failed to delete branch. Please try again.');
@@ -181,6 +202,8 @@ const ManageBranches = () => {
       await fetchBranches(); // Refresh the list
       setShowCapacityModal(false);
       setSelectedBranch(null);
+      setError('✅ Capacity updated successfully');
+      setTimeout(() => setError(null), 3000);
     } catch (error) {
       console.error('Error updating capacity:', error);
       setError('Failed to update capacity. Please try again.');
@@ -516,23 +539,34 @@ const ManageBranches = () => {
                 </div>
               </div>
             ))}
+
+            {/* Add New Branch Card - Positioned at the end */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-dashed border-blue-300 hover:border-blue-400 transition-all duration-200 group cursor-pointer">
+              <div 
+                onClick={() => setShowAddModal(true)}
+                className="p-8 flex flex-col items-center justify-center text-center h-full min-h-[280px] group-hover:scale-[1.02] transition-transform duration-200"
+              >
+                <div className="bg-blue-100 group-hover:bg-blue-200 transition-colors duration-200 rounded-full p-4 mb-4">
+                  <Plus className="h-8 w-8 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Add New Branch</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Create a new warehouse branch location to expand your operations
+                </p>
+                <div className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Get Started
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
         {filteredBranches.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No branches found</h3>
-            <p className="mt-1 text-sm text-gray-500">Get started by adding a new branch location.</p>
-            <div className="mt-6">
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-              >
-                <Plus className="-ml-1 mr-2 h-5 w-5" />
-                Add Branch
-              </button>
-            </div>
+          <div className="col-span-full text-center py-8">
+            <Building2 className="mx-auto h-10 w-10 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No branches match your filter</h3>
+            <p className="mt-1 text-sm text-gray-500">Try adjusting your search criteria or use the Add Branch card above.</p>
           </div>
         )}
       </div>
@@ -618,13 +652,7 @@ const ManageBranches = () => {
               <button
                 onClick={() => {
                   setShowAddModal(false);
-                  setNewBranch({
-                    name: '',
-                    location: '',
-                    description: '',
-                    capacity: '',
-                    available_space: ''
-                  });
+                  resetNewBranchForm();
                 }}
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
