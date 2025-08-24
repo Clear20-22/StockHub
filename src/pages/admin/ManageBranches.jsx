@@ -1,25 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { branchAPI } from '../../services/branches';
 import { 
   ArrowLeft,
   Plus,
   Search,
   Building2,
   MapPin,
-  Users,
-  Package,
+  Calendar,
   Edit,
   Trash2,
-  Phone,
-  Mail,
-  Calendar,
-  BarChart3,
+  Package,
   TrendingUp,
-  AlertCircle,
+  BarChart3,
+  AlertTriangle,
+  Warehouse,
+  Activity,
   CheckCircle,
   RefreshCw,
+  Save,
   Download,
-  Eye
+  Calculator,
+  AlertCircle
 } from 'lucide-react';
 
 const ManageBranches = () => {
@@ -29,21 +31,26 @@ const ManageBranches = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // New branch form data
   const [newBranch, setNewBranch] = useState({
     name: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    phone: '',
-    email: '',
-    managerName: '',
+    location: '',
+    description: '',
     capacity: '',
-    description: ''
+    available_space: ''
+  });
+
+  // Capacity management state
+  const [capacityData, setCapacityData] = useState({
+    currentCapacity: 0,
+    newCapacity: 0,
+    usedSpace: 0,
+    availableSpace: 0
   });
 
   useEffect(() => {
@@ -53,128 +60,70 @@ const ManageBranches = () => {
   const fetchBranches = async () => {
     try {
       setLoading(true);
-      // In real app, this would be an API call
+      setError(null);
+      const branchesData = await branchAPI.getAllBranches();
+      setBranches(branchesData);
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+      setError('Failed to fetch branches. Please try again.');
+      // Fallback to mock data if API fails
       const mockBranches = [
         {
           id: 1,
-          name: 'Main Warehouse',
-          address: '123 Industrial Blvd',
-          city: 'New York',
-          state: 'NY',
-          zipCode: '10001',
-          phone: '+1 (555) 123-4567',
-          email: 'main@stockhub.com',
-          managerName: 'John Smith',
-          capacity: 50000,
-          currentStock: 35000,
-          employeeCount: 45,
-          goodsCount: 1250,
-          status: 'active',
-          createdAt: '2024-01-01',
-          description: 'Primary distribution center and main warehouse facility'
+          name: 'StockHub Gulshan',
+          location: 'Dhaka City',
+          description: 'Primary branch serving Dhaka division',
+          capacity: 1000,
+          available_space: 750,
+          manager_id: null,
+          created_at: '2024-01-01T00:00:00Z'
         },
         {
           id: 2,
-          name: 'Downtown Branch',
-          address: '456 Commerce Street',
-          city: 'New York',
-          state: 'NY',
-          zipCode: '10002',
-          phone: '+1 (555) 987-6543',
-          email: 'downtown@stockhub.com',
-          managerName: 'Sarah Johnson',
-          capacity: 25000,
-          currentStock: 18000,
-          employeeCount: 25,
-          goodsCount: 680,
-          status: 'active',
-          createdAt: '2024-01-15',
-          description: 'Urban distribution point for city deliveries'
-        },
-        {
-          id: 3,
-          name: 'Northside Storage',
-          address: '789 Storage Way',
-          city: 'Albany',
-          state: 'NY',
-          zipCode: '12201',
-          phone: '+1 (555) 246-8135',
-          email: 'northside@stockhub.com',
-          managerName: 'Mike Wilson',
-          capacity: 30000,
-          currentStock: 12000,
-          employeeCount: 18,
-          goodsCount: 420,
-          status: 'active',
-          createdAt: '2024-02-01',
-          description: 'Regional storage facility for northern distribution'
-        },
-        {
-          id: 4,
-          name: 'Eastside Hub',
-          address: '321 Logistics Drive',
-          city: 'Rochester',
-          state: 'NY',
-          zipCode: '14602',
-          phone: '+1 (555) 135-7924',
-          email: 'eastside@stockhub.com',
-          managerName: 'Emily Davis',
-          capacity: 20000,
-          currentStock: 5000,
-          employeeCount: 12,
-          goodsCount: 180,
-          status: 'maintenance',
-          createdAt: '2024-02-15',
-          description: 'Small hub currently under maintenance expansion'
+          name: 'StockHub Agrabad',
+          location: 'Chattogram City',
+          description: 'Primary branch serving Chattogram division',
+          capacity: 1000,
+          available_space: 850,
+          manager_id: null,
+          created_at: '2024-01-02T00:00:00Z'
         }
       ];
       setBranches(mockBranches);
-    } catch (error) {
-      console.error('Error fetching branches:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const filteredBranches = branches.filter(branch => 
-    branch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    branch.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    branch.managerName.toLowerCase().includes(searchTerm.toLowerCase())
+    (branch.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (branch.location || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleAddBranch = async () => {
     setActionLoading(true);
     try {
-      // In real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const newBranchData = {
-        id: branches.length + 1,
-        ...newBranch,
-        capacity: parseInt(newBranch.capacity),
-        currentStock: 0,
-        employeeCount: 0,
-        goodsCount: 0,
-        status: 'active',
-        createdAt: new Date().toISOString().split('T')[0]
+      const branchData = {
+        name: newBranch.name,
+        location: newBranch.location,
+        description: newBranch.description,
+        capacity: parseInt(newBranch.capacity) || 0,
+        available_space: parseInt(newBranch.available_space) || parseInt(newBranch.capacity) || 0
       };
       
-      setBranches([...branches, newBranchData]);
+      await branchAPI.createBranch(branchData);
+      await fetchBranches(); // Refresh the list
       setShowAddModal(false);
       setNewBranch({
         name: '',
-        address: '',
-        city: '',
-        state: '',
-        zipCode: '',
-        phone: '',
-        email: '',
-        managerName: '',
+        location: '',
+        description: '',
         capacity: '',
-        description: ''
+        available_space: ''
       });
     } catch (error) {
       console.error('Error adding branch:', error);
+      setError('Failed to add branch. Please try again.');
     } finally {
       setActionLoading(false);
     }
@@ -183,18 +132,13 @@ const ManageBranches = () => {
   const handleEditBranch = async () => {
     setActionLoading(true);
     try {
-      // In real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setBranches(branches.map(branch => 
-        branch.id === selectedBranch.id 
-          ? { ...branch, ...selectedBranch }
-          : branch
-      ));
+      await branchAPI.updateBranch(selectedBranch.id, selectedBranch);
+      await fetchBranches(); // Refresh the list
       setShowEditModal(false);
       setSelectedBranch(null);
     } catch (error) {
       console.error('Error updating branch:', error);
+      setError('Failed to update branch. Please try again.');
     } finally {
       setActionLoading(false);
     }
@@ -204,37 +148,54 @@ const ManageBranches = () => {
     if (window.confirm('Are you sure you want to delete this branch? This action cannot be undone.')) {
       setActionLoading(true);
       try {
-        // In real app, this would be an API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setBranches(branches.filter(branch => branch.id !== branchId));
+        await branchAPI.deleteBranch(branchId);
+        await fetchBranches(); // Refresh the list
       } catch (error) {
         console.error('Error deleting branch:', error);
+        setError('Failed to delete branch. Please try again.');
       } finally {
         setActionLoading(false);
       }
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'maintenance': return 'bg-yellow-100 text-yellow-800';
-      case 'inactive': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const handleCapacityManagement = (branch) => {
+    setSelectedBranch(branch);
+    setCapacityData({
+      currentCapacity: branch.capacity || 0,
+      newCapacity: branch.capacity || 0,
+      usedSpace: (branch.capacity || 0) - (branch.available_space || 0),
+      availableSpace: branch.available_space || 0
+    });
+    setShowCapacityModal(true);
+  };
+
+  const handleUpdateCapacity = async () => {
+    setActionLoading(true);
+    try {
+      await branchAPI.updateBranchCapacity(
+        selectedBranch.id,
+        capacityData.newCapacity,
+        capacityData.usedSpace
+      );
+      await fetchBranches(); // Refresh the list
+      setShowCapacityModal(false);
+      setSelectedBranch(null);
+    } catch (error) {
+      console.error('Error updating capacity:', error);
+      setError('Failed to update capacity. Please try again.');
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'active': return <CheckCircle className="h-4 w-4" />;
-      case 'maintenance': return <AlertCircle className="h-4 w-4" />;
-      case 'inactive': return <AlertCircle className="h-4 w-4" />;
-      default: return <Building2 className="h-4 w-4" />;
-    }
+  const calculateAvailableSpace = (capacity, usedSpace) => {
+    return Math.max(0, capacity - usedSpace);
   };
 
-  const getCapacityPercentage = (current, total) => {
-    return Math.round((current / total) * 100);
+  const getCapacityPercentage = (used, total) => {
+    if (total === 0) return 0;
+    return Math.round((used / total) * 100);
   };
 
   const getCapacityColor = (percentage) => {
@@ -243,14 +204,61 @@ const ManageBranches = () => {
     return 'bg-green-500';
   };
 
+  const getBranchStatus = (branch) => {
+    const usedPercentage = getCapacityPercentage((branch.capacity || 0) - (branch.available_space || 0), branch.capacity || 0);
+    
+    if (usedPercentage >= 95) {
+      return {
+        label: 'Critical',
+        color: 'bg-red-100 text-red-800',
+        icon: AlertTriangle,
+        iconColor: 'text-red-500'
+      };
+    } else if (usedPercentage >= 85) {
+      return {
+        label: 'High Usage',
+        color: 'bg-orange-100 text-orange-800',
+        icon: AlertTriangle,
+        iconColor: 'text-orange-500'
+      };
+    } else if (usedPercentage >= 70) {
+      return {
+        label: 'Moderate',
+        color: 'bg-yellow-100 text-yellow-800',
+        icon: Activity,
+        iconColor: 'text-yellow-500'
+      };
+    } else if (usedPercentage >= 50) {
+      return {
+        label: 'Active',
+        color: 'bg-blue-100 text-blue-800',
+        icon: CheckCircle,
+        iconColor: 'text-blue-500'
+      };
+    } else {
+      return {
+        label: 'Available',
+        color: 'bg-green-100 text-green-800',
+        icon: CheckCircle,
+        iconColor: 'text-green-500'
+      };
+    }
+  };
+
   const calculateStats = () => {
     const totalBranches = branches.length;
-    const activeBranches = branches.filter(b => b.status === 'active').length;
-    const totalCapacity = branches.reduce((sum, b) => sum + b.capacity, 0);
-    const totalStock = branches.reduce((sum, b) => sum + b.currentStock, 0);
-    const totalEmployees = branches.reduce((sum, b) => sum + b.employeeCount, 0);
+    const totalCapacity = branches.reduce((sum, b) => sum + (b.capacity || 0), 0);
+    const totalUsedSpace = branches.reduce((sum, b) => sum + ((b.capacity || 0) - (b.available_space || 0)), 0);
+    const totalAvailableSpace = branches.reduce((sum, b) => sum + (b.available_space || 0), 0);
+    const averageUtilization = totalCapacity > 0 ? Math.round((totalUsedSpace / totalCapacity) * 100) : 0;
 
-    return { totalBranches, activeBranches, totalCapacity, totalStock, totalEmployees };
+    return { 
+      totalBranches, 
+      totalCapacity, 
+      totalUsedSpace,
+      totalAvailableSpace, 
+      averageUtilization 
+    };
   };
 
   const stats = calculateStats();
@@ -293,6 +301,19 @@ const ManageBranches = () => {
 
       {/* Statistics Cards */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
+            <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+            <p className="text-red-700">{error}</p>
+            <button 
+              onClick={() => setError(null)}
+              className="ml-auto text-red-500 hover:text-red-700"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
             <div className="flex items-center">
@@ -300,16 +321,6 @@ const ManageBranches = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Branches</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.totalBranches}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Active Branches</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.activeBranches}</p>
               </div>
             </div>
           </div>
@@ -328,18 +339,28 @@ const ManageBranches = () => {
             <div className="flex items-center">
               <BarChart3 className="h-8 w-8 text-orange-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Current Stock</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalStock.toLocaleString()}</p>
+                <p className="text-sm font-medium text-gray-600">Used Space</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalUsedSpace.toLocaleString()}</p>
               </div>
             </div>
           </div>
 
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
             <div className="flex items-center">
-              <Users className="h-8 w-8 text-indigo-600" />
+              <CheckCircle className="h-8 w-8 text-green-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Employees</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalEmployees}</p>
+                <p className="text-sm font-medium text-gray-600">Available Space</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalAvailableSpace.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <TrendingUp className="h-8 w-8 text-indigo-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Avg Utilization</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.averageUtilization}%</p>
               </div>
             </div>
           </div>
@@ -353,7 +374,7 @@ const ManageBranches = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <input
                   type="text"
-                  placeholder="Search branches by name, city, or manager..."
+                  placeholder="Search branches by name or location..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -386,28 +407,43 @@ const ManageBranches = () => {
                     <div className="flex items-center">
                       <Building2 className="h-8 w-8 text-blue-600 mr-3" />
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-900">{branch.name}</h3>
-                        <p className="text-sm text-gray-500">{branch.city}, {branch.state}</p>
+                        <h3 className="text-lg font-semibold text-gray-900">{branch.name || 'Unnamed Branch'}</h3>
+                        <p className="text-sm text-gray-500">{branch.location || 'Location not specified'}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(branch.status)}`}>
-                        {getStatusIcon(branch.status)}
-                        <span className="ml-1 capitalize">{branch.status}</span>
-                      </span>
+                      {(() => {
+                        const status = getBranchStatus(branch);
+                        const StatusIcon = status.icon;
+                        return (
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
+                            <StatusIcon className={`h-3 w-3 mr-1 ${status.iconColor}`} />
+                            {status.label}
+                          </span>
+                        );
+                      })()}
                       <div className="flex items-center space-x-1">
+                        <button
+                          onClick={() => handleCapacityManagement(branch)}
+                          className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
+                          title="Manage Capacity"
+                        >
+                          <Calculator className="h-4 w-4" />
+                        </button>
                         <button
                           onClick={() => {
                             setSelectedBranch(branch);
                             setShowEditModal(true);
                           }}
                           className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Edit Branch"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteBranch(branch.id)}
                           className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                          title="Delete Branch"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -418,56 +454,63 @@ const ManageBranches = () => {
                   {/* Address */}
                   <div className="flex items-center text-sm text-gray-600 mb-4">
                     <MapPin className="h-4 w-4 mr-2" />
-                    <span>{branch.address}, {branch.city}, {branch.state} {branch.zipCode}</span>
+                    <span>{branch.location || 'Location not specified'}</span>
                   </div>
 
-                  {/* Contact Info */}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Phone className="h-4 w-4 mr-2" />
-                      <span>{branch.phone}</span>
+                  {/* Description */}
+                  {branch.description && (
+                    <div className="text-sm text-gray-600 mb-4">
+                      <p>{branch.description}</p>
                     </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Mail className="h-4 w-4 mr-2" />
-                      <span>{branch.email}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Users className="h-4 w-4 mr-2" />
-                      <span>Manager: {branch.managerName}</span>
-                    </div>
-                  </div>
+                  )}
 
-                  {/* Capacity Bar */}
-                  <div className="mb-4">
+                  {/* Capacity Information */}
+                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
                       <span>Storage Capacity</span>
-                      <span>{getCapacityPercentage(branch.currentStock, branch.capacity)}% Used</span>
+                      <div className="flex items-center space-x-2">
+                        <span>{getCapacityPercentage((branch.capacity || 0) - (branch.available_space || 0), branch.capacity || 0)}% Used</span>
+                        {(() => {
+                          const status = getBranchStatus(branch);
+                          const StatusIcon = status.icon;
+                          return (
+                            <div className="flex items-center" title={`Status: ${status.label}`}>
+                              <StatusIcon className={`h-4 w-4 ${status.iconColor}`} />
+                            </div>
+                          );
+                        })()}
+                      </div>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
                       <div 
-                        className={`h-2 rounded-full ${getCapacityColor(getCapacityPercentage(branch.currentStock, branch.capacity))}`}
-                        style={{ width: `${getCapacityPercentage(branch.currentStock, branch.capacity)}%` }}
+                        className={`h-2 rounded-full ${getCapacityColor(getCapacityPercentage((branch.capacity || 0) - (branch.available_space || 0), branch.capacity || 0))}`}
+                        style={{ width: `${getCapacityPercentage((branch.capacity || 0) - (branch.available_space || 0), branch.capacity || 0)}%` }}
                       ></div>
                     </div>
-                    <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
-                      <span>{branch.currentStock.toLocaleString()} used</span>
-                      <span>{branch.capacity.toLocaleString()} total</span>
+                    <div className="grid grid-cols-3 gap-2 text-xs text-gray-500">
+                      <div>
+                        <span className="font-medium">Total:</span>
+                        <br />
+                        <span>{(branch.capacity || 0).toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Used:</span>
+                        <br />
+                        <span>{((branch.capacity || 0) - (branch.available_space || 0)).toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Available:</span>
+                        <br />
+                        <span>{(branch.available_space || 0).toLocaleString()}</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
-                    <div className="text-center">
-                      <p className="text-lg font-semibold text-gray-900">{branch.employeeCount}</p>
-                      <p className="text-xs text-gray-500">Employees</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-lg font-semibold text-gray-900">{branch.goodsCount}</p>
-                      <p className="text-xs text-gray-500">Items</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-lg font-semibold text-gray-900">{new Date(branch.createdAt).getFullYear()}</p>
-                      <p className="text-xs text-gray-500">Established</p>
+                  {/* Created Date */}
+                  <div className="pt-4 border-t border-gray-200">
+                    <div className="flex items-center text-xs text-gray-500">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      <span>Created: {branch.created_at ? new Date(branch.created_at).toLocaleDateString() : 'Date not available'}</span>
                     </div>
                   </div>
                 </div>
@@ -500,120 +543,96 @@ const ManageBranches = () => {
           <div className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-screen overflow-y-auto">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Branch</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Branch Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Branch Name *</label>
                 <input
                   type="text"
                   value={newBranch.name}
                   onChange={(e) => setNewBranch({...newBranch, name: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter branch name"
+                  required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Manager Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
                 <input
                   type="text"
-                  value={newBranch.managerName}
-                  onChange={(e) => setNewBranch({...newBranch, managerName: e.target.value})}
+                  value={newBranch.location}
+                  onChange={(e) => setNewBranch({...newBranch, location: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                <input
-                  type="text"
-                  value={newBranch.address}
-                  onChange={(e) => setNewBranch({...newBranch, address: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter location (e.g., Dhaka City, Bangladesh)"
+                  required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                <input
-                  type="text"
-                  value={newBranch.city}
-                  onChange={(e) => setNewBranch({...newBranch, city: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  rows={3}
+                  value={newBranch.description}
+                  onChange={(e) => setNewBranch({...newBranch, description: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  placeholder="Brief description of the branch (optional)"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                <input
-                  type="text"
-                  value={newBranch.state}
-                  onChange={(e) => setNewBranch({...newBranch, state: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Total Capacity *</label>
+                  <input
+                    type="number"
+                    value={newBranch.capacity}
+                    onChange={(e) => setNewBranch({...newBranch, capacity: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Total storage capacity"
+                    min="0"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Available Space</label>
+                  <input
+                    type="number"
+                    value={newBranch.available_space}
+                    onChange={(e) => setNewBranch({...newBranch, available_space: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Available storage space"
+                    min="0"
+                    max={newBranch.capacity || undefined}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-                <input
-                  type="text"
-                  value={newBranch.zipCode}
-                  onChange={(e) => setNewBranch({...newBranch, zipCode: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input
-                  type="tel"
-                  value={newBranch.phone}
-                  onChange={(e) => setNewBranch({...newBranch, phone: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  value={newBranch.email}
-                  onChange={(e) => setNewBranch({...newBranch, email: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Storage Capacity</label>
-                <input
-                  type="number"
-                  value={newBranch.capacity}
-                  onChange={(e) => setNewBranch({...newBranch, capacity: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Square feet"
-                />
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                rows={3}
-                value={newBranch.description}
-                onChange={(e) => setNewBranch({...newBranch, description: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                placeholder="Brief description of the branch..."
-              />
+              {newBranch.capacity && newBranch.available_space && parseInt(newBranch.available_space) > parseInt(newBranch.capacity) && (
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                  Available space cannot be greater than total capacity
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end space-x-3 mt-6">
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setShowAddModal(false);
+                  setNewBranch({
+                    name: '',
+                    location: '',
+                    description: '',
+                    capacity: '',
+                    available_space: ''
+                  });
+                }}
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddBranch}
-                disabled={actionLoading}
+                disabled={actionLoading || !newBranch.name || !newBranch.location || !newBranch.capacity}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
                 {actionLoading ? 'Adding...' : 'Add Branch'}
@@ -629,134 +648,193 @@ const ManageBranches = () => {
           <div className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-screen overflow-y-auto">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Branch</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Branch Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Branch Name *</label>
                 <input
                   type="text"
-                  value={selectedBranch.name}
+                  value={selectedBranch.name || ''}
                   onChange={(e) => setSelectedBranch({...selectedBranch, name: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Manager Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
                 <input
                   type="text"
-                  value={selectedBranch.managerName}
-                  onChange={(e) => setSelectedBranch({...selectedBranch, managerName: e.target.value})}
+                  value={selectedBranch.location || ''}
+                  onChange={(e) => setSelectedBranch({...selectedBranch, location: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                <input
-                  type="text"
-                  value={selectedBranch.address}
-                  onChange={(e) => setSelectedBranch({...selectedBranch, address: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                <input
-                  type="text"
-                  value={selectedBranch.city}
-                  onChange={(e) => setSelectedBranch({...selectedBranch, city: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  rows={3}
+                  value={selectedBranch.description || ''}
+                  onChange={(e) => setSelectedBranch({...selectedBranch, description: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                <input
-                  type="text"
-                  value={selectedBranch.state}
-                  onChange={(e) => setSelectedBranch({...selectedBranch, state: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Total Capacity *</label>
+                  <input
+                    type="number"
+                    value={selectedBranch.capacity || 0}
+                    onChange={(e) => setSelectedBranch({...selectedBranch, capacity: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    min="0"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Available Space</label>
+                  <input
+                    type="number"
+                    value={selectedBranch.available_space || 0}
+                    onChange={(e) => setSelectedBranch({...selectedBranch, available_space: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    min="0"
+                    max={selectedBranch.capacity || 0}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-                <input
-                  type="text"
-                  value={selectedBranch.zipCode}
-                  onChange={(e) => setSelectedBranch({...selectedBranch, zipCode: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input
-                  type="tel"
-                  value={selectedBranch.phone}
-                  onChange={(e) => setSelectedBranch({...selectedBranch, phone: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  value={selectedBranch.email}
-                  onChange={(e) => setSelectedBranch({...selectedBranch, email: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Storage Capacity</label>
-                <input
-                  type="number"
-                  value={selectedBranch.capacity}
-                  onChange={(e) => setSelectedBranch({...selectedBranch, capacity: parseInt(e.target.value)})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  value={selectedBranch.status}
-                  onChange={(e) => setSelectedBranch({...selectedBranch, status: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="active">Active</option>
-                  <option value="maintenance">Maintenance</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                rows={3}
-                value={selectedBranch.description}
-                onChange={(e) => setSelectedBranch({...selectedBranch, description: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              />
+              {selectedBranch.available_space && selectedBranch.capacity && selectedBranch.available_space > selectedBranch.capacity && (
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                  Available space cannot be greater than total capacity
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end space-x-3 mt-6">
               <button
-                onClick={() => setShowEditModal(false)}
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedBranch(null);
+                }}
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleEditBranch}
-                disabled={actionLoading}
+                disabled={actionLoading || !selectedBranch.name || !selectedBranch.location}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
                 {actionLoading ? 'Updating...' : 'Update Branch'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Capacity Management Modal */}
+      {showCapacityModal && selectedBranch && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-lg w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Manage Capacity - {selectedBranch.name}</h3>
+            
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Current Status</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Total Capacity:</span>
+                    <p className="font-semibold">{(capacityData.currentCapacity || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Used Space:</span>
+                    <p className="font-semibold">{(capacityData.usedSpace || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Available Space:</span>
+                    <p className="font-semibold">{(capacityData.availableSpace || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Utilization:</span>
+                    <p className="font-semibold">{getCapacityPercentage(capacityData.usedSpace, capacityData.currentCapacity)}%</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">New Total Capacity</label>
+                <input
+                  type="number"
+                  value={capacityData.newCapacity}
+                  onChange={(e) => {
+                    const newCap = parseInt(e.target.value) || 0;
+                    setCapacityData({
+                      ...capacityData,
+                      newCapacity: newCap,
+                      availableSpace: calculateAvailableSpace(newCap, capacityData.usedSpace)
+                    });
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Used Space</label>
+                <input
+                  type="number"
+                  value={capacityData.usedSpace}
+                  onChange={(e) => {
+                    const used = parseInt(e.target.value) || 0;
+                    setCapacityData({
+                      ...capacityData,
+                      usedSpace: used,
+                      availableSpace: calculateAvailableSpace(capacityData.newCapacity, used)
+                    });
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  min="0"
+                  max={capacityData.newCapacity}
+                />
+              </div>
+
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  <strong>New Available Space:</strong> {calculateAvailableSpace(capacityData.newCapacity, capacityData.usedSpace).toLocaleString()}
+                </p>
+                <p className="text-sm text-blue-700">
+                  <strong>New Utilization:</strong> {getCapacityPercentage(capacityData.usedSpace, capacityData.newCapacity)}%
+                </p>
+              </div>
+
+              {capacityData.usedSpace > capacityData.newCapacity && (
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded flex items-center">
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  Used space cannot exceed total capacity
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowCapacityModal(false);
+                  setSelectedBranch(null);
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateCapacity}
+                disabled={actionLoading || capacityData.usedSpace > capacityData.newCapacity}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {actionLoading ? 'Updating...' : 'Update Capacity'}
               </button>
             </div>
           </div>
