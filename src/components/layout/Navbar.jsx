@@ -89,7 +89,9 @@ const Navbar = () => {
       return [
         ...baseItems,
         { name: 'My Tasks', path: '/employee/assignments', icon: ClipboardList },
-        { name: 'Inventory', path: '/employee/goods', icon: Package },
+        { name: 'Inventory', path: '/employee/inventory', icon: Package },
+        { name: 'Reports', path: '/employee/reports', icon: TrendingUp },
+        { name: 'Time Tracker', path: '/employee/timetracker', icon: CheckCircle },
       ];
     }
 
@@ -161,6 +163,21 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
               <div className="flex items-center space-x-4">
+                {/* Employee additional features */}
+                {user?.role === 'employee' && (
+                  <div className="flex items-center space-x-2">
+                    <button className="relative p-2 text-blue-100 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10 rounded-lg transition-all duration-200">
+                      <Bell className="h-5 w-5" />
+                      <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-orange-400 ring-2 ring-white/50"></span>
+                    </button>
+                    <button 
+                      onClick={() => navigate('/employee/settings')}
+                      className="p-2 text-blue-100 hover:text-white hover:bg-gradient-to-r hover:from-white/15 hover:to-white/10 rounded-lg transition-all duration-200"
+                    >
+                      <Settings className="h-5 w-5" />
+                    </button>
+                  </div>
+                )}
                 {/* Customer additional features */}
                 {user?.role === 'customer' && (
                   <div className="flex items-center space-x-2">
