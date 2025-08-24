@@ -21,10 +21,12 @@ import CustomerSettings from './pages/customer/CustomerSettings'
 import EmployeeDashboard from './pages/employee/Dashboard'
 import EmployeeGoods from './pages/employee/Goods'
 import EmployeeAssignments from './pages/employee/Assignments'
+import EmployeeInventory from './pages/employee/Inventory'
+import EmployeeReports from './pages/employee/Reports'
+import EmployeeTimeTracker from './pages/employee/TimeTracker'
+import EmployeeSettings from './pages/employee/Settings'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminUsers from './pages/admin/Users'
-import AdminGoods from './pages/admin/Goods'
-import AdminBranches from './pages/admin/Branches'
 import AdminAssignments from './pages/admin/Assignments'
 import AdminSettings from './pages/admin/AdminSettings'
 import ManageUsers from './pages/admin/ManageUsers'
@@ -176,6 +178,26 @@ const AppWithScrolling = () => {
               <EmployeeAssignments />
             </ProtectedRoute>
           } />
+          <Route path="/employee/inventory" element={
+            <ProtectedRoute allowedRoles={['employee', 'admin']}>
+              <EmployeeInventory />
+            </ProtectedRoute>
+          } />
+          <Route path="/employee/reports" element={
+            <ProtectedRoute allowedRoles={['employee', 'admin']}>
+              <EmployeeReports />
+            </ProtectedRoute>
+          } />
+          <Route path="/employee/time-tracker" element={
+            <ProtectedRoute allowedRoles={['employee', 'admin']}>
+              <EmployeeTimeTracker />
+            </ProtectedRoute>
+          } />
+          <Route path="/employee/settings" element={
+            <ProtectedRoute allowedRoles={['employee', 'admin']}>
+              <EmployeeSettings />
+            </ProtectedRoute>
+          } />
 
           {/* Admin routes */}
           <Route path="/admin/dashboard" element={
@@ -195,7 +217,7 @@ const AppWithScrolling = () => {
           } />
           <Route path="/admin/goods" element={
             <ProtectedRoute allowedRoles={['admin']}>
-              <AdminGoods />
+              <ManageGoods />
             </ProtectedRoute>
           } />
           <Route path="/admin/manage-goods" element={
@@ -205,7 +227,7 @@ const AppWithScrolling = () => {
           } />
           <Route path="/admin/branches" element={
             <ProtectedRoute allowedRoles={['admin']}>
-              <AdminBranches />
+              <ManageBranches />
             </ProtectedRoute>
           } />
           <Route path="/admin/manage-branches" element={
