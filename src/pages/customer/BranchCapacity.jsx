@@ -10,87 +10,55 @@ import {
   TrendingUp,
   Clock,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  RefreshCw,
+  Activity
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { branchAPI } from '../../services/branches';
 
 const BranchCapacity = () => {
   const navigate = useNavigate();
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Mock branch data
-  const branches = [
-    {
-      id: 1,
-      name: 'Main Warehouse',
-      location: 'Downtown District',
-      address: '123 Storage St, Central City',
-      totalCapacity: 10000,
-      usedCapacity: 7500,
-      availableCapacity: 2500,
-      status: 'optimal',
-      manager: 'John Smith',
-      phone: '+1 (555) 123-4567',
-      features: ['Climate Controlled', '24/7 Security', 'Loading Dock', 'Insurance'],
-      operatingHours: '6:00 AM - 10:00 PM',
-      lastUpdated: '2024-08-21T14:30:00Z'
-    },
-    {
-      id: 2,
-      name: 'North Branch',
-      location: 'Industrial Zone',
-      address: '456 Warehouse Ave, North City',
-      totalCapacity: 8000,
-      usedCapacity: 6800,
-      availableCapacity: 1200,
-      status: 'busy',
-      manager: 'Sarah Johnson',
-      phone: '+1 (555) 234-5678',
-      features: ['High Security', 'Refrigerated Units', 'Forklift Access'],
-      operatingHours: '7:00 AM - 9:00 PM',
-      lastUpdated: '2024-08-21T13:45:00Z'
-    },
-    {
-      id: 3,
-      name: 'East Storage',
-      location: 'Business Park',
-      address: '789 Commerce Blvd, East City',
-      totalCapacity: 6000,
-      usedCapacity: 5400,
-      availableCapacity: 600,
-      status: 'full',
-      manager: 'Mike Wilson',
-      phone: '+1 (555) 345-6789',
-      features: ['Document Storage', 'Digital Catalog', 'Quick Access'],
-      operatingHours: '8:00 AM - 8:00 PM',
-      lastUpdated: '2024-08-21T15:15:00Z'
-    },
-    {
-      id: 4,
-      name: 'West Facility',
-      location: 'Tech District',
-      address: '321 Innovation Dr, West City',
-      totalCapacity: 12000,
-      usedCapacity: 3600,
-      availableCapacity: 8400,
-      status: 'available',
-      manager: 'Lisa Chen',
-      phone: '+1 (555) 456-7890',
-      features: ['Smart Storage', 'Automated Systems', 'Premium Security'],
-      operatingHours: '24/7 Access',
-      lastUpdated: '2024-08-21T16:00:00Z'
-    }
-  ];
+  const [branches, setBranches] = useState([]);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timer);
+    fetchBranches();
   }, []);
 
+  const fetchBranches = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const branchesData = await branchAPI.getAllBranches();
+      setBranches(branchesData);
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+      setError('Failed to fetch branches. Please try again.');
+      // Fallback to empty array if API fails
+      setBranches([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getCapacityPercentage = (used, total) => {
+    if (!total || total === 0) return 0;
     return Math.round((used / total) * 100);
+  };
+
+  const getBranchStatus = (branch) => {
+    const capacity = branch.capacity || 0;
+    const availableSpace = branch.available_space || 0;
+    const usedSpace = capacity - availableSpace;
+    const usedPercentage = getCapacityPercentage(usedSpace, capacity);
+    
+    if (usedPercentage >= 95) return 'full';
+    if (usedPercentage >= 80) return 'busy';
+    if (usedPercentage >= 50) return 'optimal';
+    return 'available';
   };
 
   const getStatusColor = (status) => {
@@ -107,14 +75,15 @@ const BranchCapacity = () => {
     switch (status) {
       case 'available': return CheckCircle;
       case 'optimal': return TrendingUp;
-      case 'busy': return Clock;
+      case 'busy': return Activity;
       case 'full': return AlertTriangle;
       default: return Package;
     }
   };
 
-  const CapacityBar = ({ used, total, status }) => {
-    const percentage = getCapacityPercentage(used, total);
+  const CapacityBar = ({ capacity, availableSpace, status }) => {
+    const usedSpace = (capacity || 0) - (availableSpace || 0);
+    const percentage = getCapacityPercentage(usedSpace, capacity);
     let barColor = 'bg-green-500';
     
     if (percentage > 90) barColor = 'bg-red-500';
@@ -124,7 +93,7 @@ const BranchCapacity = () => {
     return (
       <div className="w-full">
         <div className="flex justify-between text-sm font-medium text-gray-700 mb-2">
-          <span>{used.toLocaleString()} sq ft used</span>
+          <span>{usedSpace.toLocaleString()} used</span>
           <span>{percentage}% full</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-3">
@@ -135,7 +104,7 @@ const BranchCapacity = () => {
         </div>
         <div className="flex justify-between text-xs text-gray-500 mt-1">
           <span>0</span>
-          <span>{total.toLocaleString()} sq ft total</span>
+          <span>{(capacity || 0).toLocaleString()} total</span>
         </div>
       </div>
     );
@@ -160,9 +129,18 @@ const BranchCapacity = () => {
                 <p className="text-gray-600 mt-1">Real-time warehouse availability and capacity information</p>
               </div>
             </div>
-            <div className="flex items-center space-x-2 text-blue-600">
-              <Building2 className="h-8 w-8" />
-              <span className="text-2xl font-bold">StockHub</span>
+            <div className="flex items-center space-x-4">
+              <button 
+                onClick={fetchBranches}
+                className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </button>
+              <div className="flex items-center space-x-2 text-blue-600">
+                <Building2 className="h-8 w-8" />
+                <span className="text-2xl font-bold">StockHub</span>
+              </div>
             </div>
           </div>
         </div>
@@ -170,6 +148,19 @@ const BranchCapacity = () => {
 
       {/* Summary Stats */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
+            <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
+            <p className="text-red-700">{error}</p>
+            <button 
+              onClick={() => setError(null)}
+              className="ml-auto text-red-500 hover:text-red-700"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
             <div className="flex items-center justify-between">
@@ -186,8 +177,7 @@ const BranchCapacity = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Capacity</p>
                 <p className="text-3xl font-bold text-green-600">
-                  {branches.reduce((sum, branch) => sum + branch.totalCapacity, 0).toLocaleString()} 
-                  <span className="text-lg text-gray-500 font-normal"> sq ft</span>
+                  {branches.reduce((sum, branch) => sum + (branch.capacity || 0), 0).toLocaleString()}
                 </p>
               </div>
               <BarChart3 className="h-8 w-8 text-green-500" />
@@ -199,8 +189,7 @@ const BranchCapacity = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Available Space</p>
                 <p className="text-3xl font-bold text-orange-600">
-                  {branches.reduce((sum, branch) => sum + branch.availableCapacity, 0).toLocaleString()}
-                  <span className="text-lg text-gray-500 font-normal"> sq ft</span>
+                  {branches.reduce((sum, branch) => sum + (branch.available_space || 0), 0).toLocaleString()}
                 </p>
               </div>
               <Package className="h-8 w-8 text-orange-500" />
@@ -212,7 +201,12 @@ const BranchCapacity = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Avg. Utilization</p>
                 <p className="text-3xl font-bold text-purple-600">
-                  {Math.round(branches.reduce((sum, branch) => sum + getCapacityPercentage(branch.usedCapacity, branch.totalCapacity), 0) / branches.length)}%
+                  {branches.length > 0 ? Math.round(branches.reduce((sum, branch) => {
+                    const capacity = branch.capacity || 0;
+                    const availableSpace = branch.available_space || 0;
+                    const usedSpace = capacity - availableSpace;
+                    return sum + getCapacityPercentage(usedSpace, capacity);
+                  }, 0) / branches.length) : 0}%
                 </p>
               </div>
               <TrendingUp className="h-8 w-8 text-purple-500" />
@@ -234,10 +228,28 @@ const BranchCapacity = () => {
                 </div>
               </div>
             ))
+          ) : branches.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <Building2 className="mx-auto h-16 w-16 text-gray-400" />
+              <h3 className="mt-4 text-lg font-medium text-gray-900">No branches found</h3>
+              <p className="mt-2 text-gray-500">
+                {error ? 'Please check your connection and try again.' : 'No warehouse branches are currently available.'}
+              </p>
+              <button
+                onClick={fetchBranches}
+                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Try Again
+              </button>
+            </div>
           ) : (
             branches.map((branch) => {
-              const StatusIcon = getStatusIcon(branch.status);
-              const capacityPercentage = getCapacityPercentage(branch.usedCapacity, branch.totalCapacity);
+              const status = getBranchStatus(branch);
+              const StatusIcon = getStatusIcon(status);
+              const capacity = branch.capacity || 0;
+              const availableSpace = branch.available_space || 0;
+              const usedSpace = capacity - availableSpace;
               
               return (
                 <div 
@@ -248,15 +260,15 @@ const BranchCapacity = () => {
                   <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-2xl font-bold text-white">{branch.name}</h3>
+                        <h3 className="text-2xl font-bold text-white">{branch.name || 'Unnamed Branch'}</h3>
                         <p className="text-blue-100 flex items-center mt-1">
                           <MapPin className="h-4 w-4 mr-1" />
-                          {branch.location}
+                          {branch.location || 'Location not specified'}
                         </p>
                       </div>
-                      <div className={`flex items-center px-3 py-1 rounded-full border ${getStatusColor(branch.status)}`}>
+                      <div className={`flex items-center px-3 py-1 rounded-full border ${getStatusColor(status)}`}>
                         <StatusIcon className="h-4 w-4 mr-1" />
-                        <span className="font-medium capitalize">{branch.status}</span>
+                        <span className="font-medium capitalize">{status}</span>
                       </div>
                     </div>
                   </div>
@@ -267,54 +279,53 @@ const BranchCapacity = () => {
                     <div>
                       <h4 className="text-lg font-semibold text-gray-900 mb-4">Storage Capacity</h4>
                       <CapacityBar 
-                        used={branch.usedCapacity} 
-                        total={branch.totalCapacity} 
-                        status={branch.status} 
+                        capacity={capacity}
+                        availableSpace={availableSpace}
+                        status={status} 
                       />
                       <div className="mt-4 text-sm text-gray-600">
                         <span className="font-medium text-green-600">
-                          {branch.availableCapacity.toLocaleString()} sq ft available
+                          {availableSpace.toLocaleString()} units available
                         </span>
                         {' for immediate storage'}
                       </div>
                     </div>
 
-                    {/* Contact Information */}
+                    {/* Description */}
+                    {branch.description && (
+                      <div>
+                        <h5 className="font-semibold text-gray-700 mb-2">Description</h5>
+                        <p className="text-gray-600">{branch.description}</p>
+                      </div>
+                    )}
+
+                    {/* Contact Information - Mock data since not in DB */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <h5 className="font-semibold text-gray-700 mb-2 flex items-center">
                           <Users className="h-4 w-4 mr-1" />
                           Manager
                         </h5>
-                        <p className="text-gray-600">{branch.manager}</p>
-                        <p className="text-sm text-blue-600">{branch.phone}</p>
+                        <p className="text-gray-600">Branch Manager</p>
+                        <p className="text-sm text-blue-600">Contact for details</p>
                       </div>
                       <div>
                         <h5 className="font-semibold text-gray-700 mb-2 flex items-center">
                           <Clock className="h-4 w-4 mr-1" />
                           Hours
                         </h5>
-                        <p className="text-gray-600">{branch.operatingHours}</p>
+                        <p className="text-gray-600">9:00 AM - 6:00 PM</p>
                       </div>
                     </div>
 
-                    {/* Address */}
-                    <div>
-                      <h5 className="font-semibold text-gray-700 mb-2 flex items-center">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        Address
-                      </h5>
-                      <p className="text-gray-600">{branch.address}</p>
-                    </div>
-
-                    {/* Features */}
+                    {/* Features - Mock data */}
                     <div>
                       <h5 className="font-semibold text-gray-700 mb-3 flex items-center">
                         <Zap className="h-4 w-4 mr-1" />
                         Features
                       </h5>
                       <div className="flex flex-wrap gap-2">
-                        {branch.features.map((feature, index) => (
+                        {['Secure Storage', 'Climate Controlled', '24/7 Access'].map((feature, index) => (
                           <span 
                             key={index}
                             className="px-3 py-1 bg-blue-50 text-blue-700 text-sm font-medium rounded-full border border-blue-200"
@@ -330,10 +341,10 @@ const BranchCapacity = () => {
                       <button 
                         onClick={() => navigate('/customer/store-goods')}
                         className="flex-1 flex items-center justify-center px-4 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                        disabled={branch.status === 'full'}
+                        disabled={status === 'full'}
                       >
                         <Package className="mr-2 h-4 w-4" />
-                        {branch.status === 'full' ? 'Currently Full' : 'Store Items Here'}
+                        {status === 'full' ? 'Currently Full' : 'Store Items Here'}
                       </button>
                       <button className="flex items-center justify-center px-4 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors duration-200">
                         <MapPin className="mr-2 h-4 w-4" />
@@ -343,7 +354,7 @@ const BranchCapacity = () => {
 
                     {/* Last Updated */}
                     <div className="text-xs text-gray-500 border-t border-gray-100 pt-3">
-                      Last updated: {new Date(branch.lastUpdated).toLocaleString()}
+                      Created: {branch.created_at ? new Date(branch.created_at).toLocaleString() : 'Date not available'}
                     </div>
                   </div>
                 </div>
