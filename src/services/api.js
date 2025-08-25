@@ -36,11 +36,11 @@ api.interceptors.response.use(
   }
 );
 
-// Auth API
+// Auth API - Updated to use MongoDB endpoints
 export const authAPI = {
-  login: (credentials) => api.post('/api/auth/login', credentials),
-  register: (userData) => api.post('/api/auth/register', userData),
-  getCurrentUser: () => api.get('/api/users/me'),
+  login: (credentials) => api.post('/api/mongo/auth/login', credentials),
+  register: (userData) => api.post('/api/mongo/auth/register', userData),
+  getCurrentUser: () => api.get('/api/mongo/auth/me'),
 };
 
 // Users API
@@ -55,17 +55,17 @@ export const usersAPI = {
   getDashboardStats: () => api.get('/api/users/dashboard/stats'),
 };
 
-// Goods API
+// Goods API - Using MongoDB endpoints
 export const goodsAPI = {
-  getGoods: (params = {}) => api.get('/api/goods', { params }),
-  getMyGoods: (params = {}) => api.get('/api/goods/my-goods', { params }),
-  getGood: (id) => api.get(`/api/goods/${id}`),
-  createGood: (data) => api.post('/api/goods', data),
-  updateGood: (id, data) => api.put(`/api/goods/${id}`, data),
-  deleteGood: (id) => api.delete(`/api/goods/${id}`),
-  updateStock: (id, data) => api.put(`/api/goods/${id}/stock`, data),
-  exportGoods: (params = {}) => api.get('/api/goods/export', { params, responseType: 'blob' }),
-  importGoods: (data) => api.post('/api/goods/import', data),
+  getGoods: (params = {}) => api.get('/api/mongo/goods', { params }),
+  getMyGoods: (params = {}) => api.get('/api/mongo/goods/my-goods', { params }),
+  getGood: (id) => api.get(`/api/mongo/goods/${id}`),
+  createGood: (data) => api.post('/api/mongo/goods', data),
+  updateGood: (id, data) => api.put(`/api/mongo/goods/${id}`, data),
+  deleteGood: (id) => api.delete(`/api/mongo/goods/${id}`),
+  updateStock: (id, data) => api.put(`/api/mongo/goods/${id}/stock`, data),
+  exportGoods: (params = {}) => api.get('/api/mongo/goods/export', { params, responseType: 'blob' }),
+  importGoods: (data) => api.post('/api/mongo/goods/import', data),
 };
 
 // Branches API

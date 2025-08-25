@@ -36,6 +36,8 @@ const ManageGoods = ({ onBack }) => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     category: '',
@@ -70,24 +72,33 @@ const ManageGoods = ({ onBack }) => {
   useEffect(() => {
     fetchGoods();
     fetchBranches();
-  }, [currentPage, searchTerm, filters]);
+  }, [currentPage, searchTerm, filters, pageSize]);
 
   const fetchGoods = async () => {
     try {
       setLoading(true);
       const params = {
         page: currentPage,
-        limit: 10,
-        search: searchTerm,
-        category: filters.category,
-        branch: filters.branch,
-        stock_status: filters.stockStatus,
-        expiry_status: filters.expiryStatus
+        limit: pageSize,
+        search: searchTerm || undefined,
+        category: filters.category || undefined,
+        branch: filters.branch || undefined,
+        stock_status: filters.stockStatus || undefined,
+        expiry_status: filters.expiryStatus || undefined
       };
 
+      // Remove undefined values
+      Object.keys(params).forEach(key => {
+        if (params[key] === undefined) {
+          delete params[key];
+        }
+      });
+
       const response = await goodsAPI.getGoods(params);
+      
       setGoods(response.data.goods || response.data || []);
-      setTotalPages(Math.ceil((response.data.total || response.data.length || 0) / 10));
+      setTotalPages(response.data.total_pages || Math.ceil((response.data.total || response.data.length || 0) / pageSize));
+      setTotalCount(response.data.total || response.data.length || 0);
     } catch (error) {
       console.error('Failed to fetch goods:', error);
       showNotification('Failed to fetch goods', 'error');
@@ -139,18 +150,39 @@ const ManageGoods = ({ onBack }) => {
     setGoodsModal({ isOpen: true, good, mode: 'edit' });
   };
 
-  const handleDeleteGood = async (goodId) => {
+  const handleDeleteGood = async (good) => {
     if (!window.confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
       return;
     }
 
     try {
+      const goodId = good.id || good._id;
+      
+      if (!goodId) {
+        showNotification('Error: Could not find item ID', 'error');
+        return;
+      }
+      
+      // Delete from backend
       await goodsAPI.deleteGood(goodId);
+      
+      // Immediately update the UI by removing the item from the local state
+      setGoods(prevGoods => prevGoods.filter(g => (g.id || g._id) !== goodId));
+      setTotalCount(prevCount => Math.max(0, prevCount - 1));
+      
       showNotification('Item deleted successfully', 'success');
-      fetchGoods();
+      
+      // Also refresh from server to ensure consistency
+      setTimeout(() => fetchGoods(), 500); // Small delay to avoid rapid API calls
     } catch (error) {
       console.error('Failed to delete good:', error);
-      showNotification('Failed to delete item', 'error');
+      const errorMessage = error.response?.data?.detail || 
+                          error.response?.data?.message || 
+                          'Failed to delete item';
+      showNotification(errorMessage, 'error');
+      
+      // If deletion failed, refresh the list to ensure consistency
+      fetchGoods();
     }
   };
 
@@ -463,7 +495,7 @@ const ManageGoods = ({ onBack }) => {
                                   <Edit3 className="w-4 h-4" />
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteGood(good.id)}
+                                  onClick={() => handleDeleteGood(good)}
                                   className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded"
                                   title="Delete Item"
                                 >
@@ -499,9 +531,32 @@ const ManageGoods = ({ onBack }) => {
                   <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm text-gray-700">
-                        Showing page <span className="font-medium">{currentPage}</span> of{' '}
-                        <span className="font-medium">{totalPages}</span>
+                        Showing <span className="font-medium">{((currentPage - 1) * pageSize) + 1}</span> to{' '}
+                        <span className="font-medium">{Math.min(currentPage * pageSize, totalCount)}</span> of{' '}
+                        <span className="font-medium">{totalCount}</span> items
+                        {totalPages > 1 && (
+                          <span className="ml-2">
+                            (Page {currentPage} of {totalPages})
+                          </span>
+                        )}
                       </p>
+                      <div className="mt-1 flex items-center text-xs text-gray-500">
+                        <span>Items per page:</span>
+                        <select
+                          value={pageSize}
+                          onChange={(e) => {
+                            setPageSize(parseInt(e.target.value));
+                            setCurrentPage(1); // Reset to first page when changing page size
+                          }}
+                          className="ml-2 px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value={5}>5</option>
+                          <option value={10}>10</option>
+                          <option value={25}>25</option>
+                          <option value={50}>50</option>
+                          <option value={100}>100</option>
+                        </select>
+                      </div>
                     </div>
                     <div>
                       <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">

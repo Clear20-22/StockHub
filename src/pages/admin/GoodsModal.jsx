@@ -157,14 +157,19 @@ const GoodsModal = ({ isOpen, onClose, good, mode, branches, onSuccess }) => {
       };
 
       if (mode === 'edit') {
-        await goodsAPI.updateGood(good.id, submitData);
+        await goodsAPI.updateGood(good.id || good._id, submitData);
         showNotification('Item updated successfully!', 'success');
       } else {
         await goodsAPI.createGood(submitData);
         showNotification('Item created successfully!', 'success');
       }
 
-      onSuccess();
+      // Call onSuccess to refresh the goods list
+      if (onSuccess) {
+        await onSuccess();
+      }
+      
+      // Close the modal after successful operation
       onClose();
     } catch (error) {
       console.error('Failed to save good:', error);

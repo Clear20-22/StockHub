@@ -181,11 +181,11 @@ def get_dashboard_stats(db: Session):
     pending_assignments = db.query(func.count(Assignment.id)).filter(Assignment.status == "pending").scalar()
     
     return {
-        "total_users": total_users,
-        "total_goods": total_goods,
-        "total_branches": total_branches,
-        "total_assignments": total_assignments,
-        "pending_assignments": pending_assignments
+"total_users": total_users,
+"total_goods": total_goods,
+"total_branches": total_branches,
+"total_assignments": total_assignments,
+"pending_assignments": pending_assignments
     }
 
 # User Activity CRUD
@@ -201,12 +201,12 @@ def get_user_activities(db: Session, user_id: int, skip: int = 0, limit: int = 5
 
 def log_user_activity(db: Session, user_id: int, action: str, description: str = None, category: str = None, ip_address: str = None, user_agent: str = None):
     activity = UserActivityCreate(
-        user_id=user_id,
-        action=action,
-        description=description,
-        category=category,
-        ip_address=ip_address,
-        user_agent=user_agent
+user_id=user_id,
+action=action,
+description=description,
+category=category,
+ip_address=ip_address,
+user_agent=user_agent
     )
     return create_user_activity(db, activity)
 
