@@ -158,14 +158,19 @@ const ManageUsers = ({ onBack }) => {
 
   const handleToggleUserStatus = async (userId, currentStatus) => {
     try {
-      await usersAPI.updateUser(userId, { is_active: !currentStatus });
+      // Use the new toggle endpoint instead of general update
+      await usersAPI.toggleUserStatus(userId);
       setUsers(users.map(user => 
         user.id === userId ? { ...user, is_active: !currentStatus } : user
       ));
       success(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
     } catch (err) {
       console.error('Error updating user status:', err);
-      error('Failed to update user status');
+      if (err.response?.data?.detail) {
+        error(err.response.data.detail);
+      } else {
+        error('Failed to update user status');
+      }
     }
   };
 
@@ -177,7 +182,11 @@ const ManageUsers = ({ onBack }) => {
         success('User deleted successfully');
       } catch (err) {
         console.error('Error deleting user:', err);
-        error('Failed to delete user');
+        if (err.response?.data?.detail) {
+          error(err.response.data.detail);
+        } else {
+          error('Failed to delete user');
+        }
       }
     }
   };

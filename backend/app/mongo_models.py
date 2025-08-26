@@ -200,6 +200,18 @@ class UserResponse(BaseModel):
     created_at: datetime
     last_login: Optional[datetime] = None
 
+class UserUpdate(BaseModel):
+    """User update model for PATCH/PUT operations"""
+    username: Optional[str] = None
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+    branch_id: Optional[int] = None
+
 class Token(BaseModel):
     """JWT Token model"""
     access_token: str
