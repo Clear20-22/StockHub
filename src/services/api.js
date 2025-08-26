@@ -45,9 +45,9 @@ export const authAPI = {
 
 // Users API
 export const usersAPI = {
-  getUsers: (params = {}) => api.get('/api/users', { params }),
+  getUsers: (params = {}) => api.get('/api/mongo/auth/admin/users', { params }), // MongoDB users endpoint
   getUser: (id) => api.get(`/api/users/${id}`),
-  createUser: (data) => api.post('/api/users', data),
+  createUser: (data) => api.post('/api/mongo/auth/admin/create-user', data), // MongoDB admin create user
   updateUser: (id, data) => api.put(`/api/users/${id}`, data),
   updateMe: (data) => api.put('/api/users/me', data),
   deleteUser: (id) => api.delete(`/api/users/${id}`),
