@@ -10,7 +10,7 @@ from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
 
 from app.mongodb import get_database
-from app.mongo_models import MongoUser, UserCreate, UserLogin, UserResponse, Token
+from app.mongo_models import MongoUser, UserCreate, UserLogin, UserResponse, UserUpdate, Token
 from app.auth_handler import (
     create_access_token, 
     decode_jwt, 
@@ -390,4 +390,245 @@ async def get_all_users(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch users: {str(e)}"
+        )
+
+@router.get("/admin/users/{user_id}", response_model=UserResponse)
+async def get_user_by_id_endpoint(
+    user_id: str,
+    current_user = Depends(require_admin)
+):
+    """Get user by ID from MongoDB (admin only)"""
+    try:
+        user = await get_user_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Prepare user data for response
+        user_data = {
+            "id": str(user["_id"]),
+            "username": user["username"],
+            "email": user["email"],
+            "role": user["role"],
+            "first_name": user.get("first_name"),
+            "last_name": user.get("last_name"),
+            "phone": user.get("phone"),
+            "address": user.get("address"),
+            "is_active": user["is_active"],
+            "created_at": user["created_at"],
+            "last_login": user.get("last_login")
+        }
+        
+        return UserResponse(**user_data)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch user: {str(e)}"
+        )
+
+@router.put("/admin/users/{user_id}", response_model=UserResponse)
+async def update_user(
+    user_id: str,
+    user_update: UserUpdate,
+    current_user = Depends(require_admin)
+):
+    """Update user by ID (admin only)"""
+    collection = get_users_collection()
+    
+    try:
+        # Check if user exists
+        existing_user = await collection.find_one({"_id": ObjectId(user_id)})
+        if not existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Prepare update data (only include non-None fields)
+        update_data = user_update.dict(exclude_unset=True)
+        if not update_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No fields to update"
+            )
+        
+        # Add updated timestamp
+        update_data["updated_at"] = datetime.utcnow()
+        
+        # Check for duplicate username/email if being updated
+        if "username" in update_data:
+            existing_username = await get_user_by_username(update_data["username"])
+            if existing_username and str(existing_username["_id"]) != user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Username already exists"
+                )
+        
+        if "email" in update_data:
+            existing_email = await get_user_by_email(update_data["email"])
+            if existing_email and str(existing_email["_id"]) != user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email already exists"
+                )
+        
+        # Update user in MongoDB
+        await collection.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": update_data}
+        )
+        
+        # Log admin update activity
+        await log_user_activity(
+            user_id=str(current_user["_id"]),
+            action="User Updated",
+            description=f"Updated user: {existing_user['username']} ({existing_user['email']})",
+            category="user_management"
+        )
+        
+        # Get updated user
+        updated_user = await collection.find_one({"_id": ObjectId(user_id)})
+        
+        # Prepare response data
+        user_data = {
+            "id": str(updated_user["_id"]),
+            "username": updated_user["username"],
+            "email": updated_user["email"],
+            "role": updated_user["role"],
+            "first_name": updated_user.get("first_name"),
+            "last_name": updated_user.get("last_name"),
+            "phone": updated_user.get("phone"),
+            "address": updated_user.get("address"),
+            "is_active": updated_user["is_active"],
+            "created_at": updated_user["created_at"],
+            "last_login": updated_user.get("last_login")
+        }
+        
+        return UserResponse(**user_data)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update user: {str(e)}"
+        )
+
+@router.patch("/admin/users/{user_id}/toggle-active")
+async def toggle_user_active_status(
+    user_id: str,
+    current_user = Depends(require_admin)
+):
+    """Toggle user active/inactive status (admin only)"""
+    collection = get_users_collection()
+    
+    try:
+        # Check if user exists
+        existing_user = await collection.find_one({"_id": ObjectId(user_id)})
+        if not existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Prevent admin from deactivating themselves
+        if str(existing_user["_id"]) == str(current_user["_id"]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot deactivate your own account"
+            )
+        
+        # Toggle active status
+        new_status = not existing_user["is_active"]
+        
+        # Update user in MongoDB
+        await collection.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {
+                "is_active": new_status,
+                "updated_at": datetime.utcnow()
+            }}
+        )
+        
+        # Log admin activity
+        action = "User Activated" if new_status else "User Deactivated"
+        await log_user_activity(
+            user_id=str(current_user["_id"]),
+            action=action,
+            description=f"{action.split()[1]} user: {existing_user['username']} ({existing_user['email']})",
+            category="user_management"
+        )
+        
+        return {
+            "message": f"User {'activated' if new_status else 'deactivated'} successfully",
+            "user_id": user_id,
+            "is_active": new_status
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to toggle user status: {str(e)}"
+        )
+
+@router.delete("/admin/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    current_user = Depends(require_admin)
+):
+    """Delete user by ID (admin only)"""
+    collection = get_users_collection()
+    
+    try:
+        # Check if user exists
+        existing_user = await collection.find_one({"_id": ObjectId(user_id)})
+        if not existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Prevent admin from deleting themselves
+        if str(existing_user["_id"]) == str(current_user["_id"]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot delete your own account"
+            )
+        
+        # Delete user from MongoDB
+        result = await collection.delete_one({"_id": ObjectId(user_id)})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Log admin delete activity
+        await log_user_activity(
+            user_id=str(current_user["_id"]),
+            action="User Deleted",
+            description=f"Deleted user: {existing_user['username']} ({existing_user['email']})",
+            category="user_management"
+        )
+        
+        return {
+            "message": "User deleted successfully",
+            "user_id": user_id,
+            "deleted_username": existing_user["username"]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete user: {str(e)}"
         )
