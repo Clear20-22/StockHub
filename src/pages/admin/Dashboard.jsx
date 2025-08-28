@@ -11,10 +11,11 @@ import {
 } from 'lucide-react';
 import ManageUsers from './ManageUsers';
 import ManageGoods from './ManageGoods';
+import AdminAssignments from './Assignments';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'manage-users', or 'manage-goods'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'manage-users', 'manage-goods', or 'assignments'
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalGoods: 0,
@@ -108,6 +109,11 @@ const AdminDashboard = () => {
     return <ManageGoods onBack={() => setCurrentView('dashboard')} />;
   }
 
+  // Render Assignments view
+  if (currentView === 'assignments') {
+    return <AdminAssignments onBack={() => setCurrentView('dashboard')} />;
+  }
+
   return (
     <div className="min-h-screen py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -190,6 +196,15 @@ const AdminDashboard = () => {
                 <div className="flex items-center">
                   <Building2 className="w-5 h-5 text-purple-600 mr-3" />
                   <span className="text-purple-700 font-medium">Manage Branches</span>
+                </div>
+              </button>
+              <button 
+                onClick={() => setCurrentView('assignments')}
+                className="w-full text-left p-3 rounded-lg bg-orange-50 hover:bg-orange-100 transition-colors duration-200"
+              >
+                <div className="flex items-center">
+                  <ClipboardList className="w-5 h-5 text-orange-600 mr-3" />
+                  <span className="text-orange-700 font-medium">Manage Assignments</span>
                 </div>
               </button>
             </div>
