@@ -7,7 +7,7 @@ from bson import ObjectId
 from datetime import datetime
 
 from app.mongodb import get_database
-from app.mongo_models import MongoGoods, GoodsCreate, GoodsUpdate
+from app.mongo_models import MongoGoods, GoodsCreate, GoodsUpdate, StockUpdate
 
 router = APIRouter()
 
@@ -215,6 +215,96 @@ async def delete_goods(goods_id: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred while deleting goods: {str(e)}"
+        )
+
+@router.put("/{goods_id}/stock")
+async def update_stock(goods_id: str, stock_update: StockUpdate):
+    """Update stock quantity for goods"""
+    if not ObjectId.is_valid(goods_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid goods ID format"
+        )
+    
+    collection = get_goods_collection()
+    
+    try:
+        # Check if goods exists
+        existing_goods = await collection.find_one({"_id": ObjectId(goods_id)})
+        if not existing_goods:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Goods not found"
+            )
+        
+        # Validate stock operation
+        current_quantity = existing_goods.get("quantity", 0)
+        
+        # Calculate new quantity based on update type
+        if stock_update.type == "inward":
+            new_quantity = current_quantity + stock_update.quantity
+        elif stock_update.type == "outward":
+            if stock_update.quantity > current_quantity:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Cannot dispatch {stock_update.quantity} items. Only {current_quantity} available."
+                )
+            new_quantity = current_quantity - stock_update.quantity
+        elif stock_update.type == "adjustment":
+            new_quantity = stock_update.quantity  # For adjustments, quantity is the new total
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid stock update type. Must be 'inward', 'outward', or 'adjustment'"
+            )
+        
+        # Ensure quantity doesn't go negative
+        new_quantity = max(0, new_quantity)
+        
+        # Update the goods with new quantity
+        update_data = {
+            "quantity": new_quantity,
+            "updated_at": datetime.utcnow()
+        }
+        
+        result = await collection.update_one(
+            {"_id": ObjectId(goods_id)},
+            {"$set": update_data}
+        )
+        
+        if result.modified_count == 1:
+            # Get updated goods
+            updated_goods = await collection.find_one({"_id": ObjectId(goods_id)})
+            updated_goods["id"] = str(updated_goods["_id"])
+            updated_goods["_id"] = str(updated_goods["_id"])
+            
+            # Create response with stock update details
+            response = {
+                "message": f"Stock successfully updated for {updated_goods['name']}",
+                "goods": updated_goods,
+                "stock_update": {
+                    "type": stock_update.type,
+                    "quantity_changed": stock_update.quantity,
+                    "previous_quantity": current_quantity,
+                    "new_quantity": new_quantity,
+                    "reason": stock_update.reason,
+                    "updated_at": update_data["updated_at"].isoformat()
+                }
+            }
+            
+            return response
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update stock"
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred while updating stock: {str(e)}"
         )
 
 @router.get("/category/{category}", response_model=List[MongoGoods])

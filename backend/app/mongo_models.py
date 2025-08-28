@@ -216,3 +216,13 @@ class Token(BaseModel):
     """JWT Token model"""
     access_token: str
     token_type: str = "bearer"
+
+class StockUpdate(BaseModel):
+    """Stock update model"""
+    type: str  # inward, outward, adjustment
+    quantity: int = Field(gt=0)  # Must be positive
+    reason: str
+    good_id: str
+    previous_quantity: int
+    new_quantity: int
+    updated_at: str  # ISO datetime string from frontend

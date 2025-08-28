@@ -24,7 +24,7 @@ import {
   Target
 } from 'lucide-react';
 
-const AdminAssignments = () => {
+const AdminAssignments = ({ onBack }) => {
   const navigate = useNavigate();
   const [assignments, setAssignments] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -335,7 +335,7 @@ const AdminAssignments = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button 
-                onClick={() => navigate('/admin/dashboard')}
+                onClick={() => onBack ? onBack() : navigate('/admin/dashboard')}
                 className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
