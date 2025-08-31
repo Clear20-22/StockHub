@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.database import engine, Base
 from app.mongodb import connect_to_mongo, close_mongo_connection
-from app.routers import auth, users, goods, branches, assignments, items
+from app.routers import auth, users, goods, branches, assignments, items, customer_applications
 from app.routers import mongo_users, mongo_goods, mongo_auth
 
 # Configure logging
@@ -54,6 +54,7 @@ app.include_router(goods.router, prefix="/api/goods", tags=["Goods"])
 app.include_router(branches.router, prefix="/api/branches", tags=["Branches"])
 app.include_router(assignments.router, prefix="/api/assignments", tags=["Assignments"])
 app.include_router(items.router, prefix="/api/items", tags=["Items"])
+app.include_router(customer_applications.router, prefix="/api/applications", tags=["Customer Applications"])
 
 # MongoDB routers (new collections)
 app.include_router(mongo_auth.router, prefix="/api/mongo/auth", tags=["MongoDB Authentication"])

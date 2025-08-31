@@ -158,3 +158,51 @@ class DashboardStats(BaseModel):
     total_branches: int
     total_assignments: int
     pending_assignments: int
+
+# Customer Application Schemas
+class CustomerApplicationBase(BaseModel):
+    # Personal Information
+    full_name: str
+    email: EmailStr
+    phone: str
+    address: Optional[str] = None
+    
+    # Business Information
+    is_business_account: bool = False
+    business_name: Optional[str] = None
+    business_type: Optional[str] = None
+    
+    # Storage Requirements
+    item_type: str
+    estimated_volume: Optional[str] = None
+    storage_type: str
+    access_frequency: Optional[str] = None
+    storage_duration: Optional[str] = None
+    special_requirements: Optional[str] = None
+    
+    # Additional Services
+    insurance_required: bool = False
+    packing_services: bool = False
+    transportation_needed: bool = False
+
+class CustomerApplicationCreate(CustomerApplicationBase):
+    pass
+
+class CustomerApplicationUpdate(BaseModel):
+    status: Optional[str] = None
+    employee_notes: Optional[str] = None
+    reviewed_by: Optional[int] = None
+
+class CustomerApplication(CustomerApplicationBase):
+    id: int
+    inventory_list_url: Optional[str] = None
+    identification_doc_url: Optional[str] = None
+    status: str
+    employee_notes: Optional[str] = None
+    reviewed_by: Optional[int] = None
+    review_date: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
