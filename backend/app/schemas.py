@@ -6,8 +6,8 @@ from datetime import datetime
 class UserBase(BaseModel):
     username: str
     email: EmailStr
-    first_name: str
-    last_name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
     branch_id: Optional[int] = None

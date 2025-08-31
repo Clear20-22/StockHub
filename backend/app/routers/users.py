@@ -159,6 +159,36 @@ def delete_user(
     crud.delete_user(db, user_id)
     return {"message": "User deleted successfully"}
 
+@router.patch("/{user_id}/toggle-active")
+def toggle_user_status(
+    user_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin)
+):
+    """Toggle user active status (admin only)"""
+    db_user = crud.get_user(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Toggle the status
+    new_status = not db_user.is_active
+    user_update = schemas.UserUpdate(is_active=new_status)
+    updated_user = crud.update_user(db, user_id, user_update)
+    
+    # Log activity
+    crud.log_user_activity(
+        db=db,
+        user_id=current_user.id,
+        action="User Status Changed",
+        description=f"{'Activated' if new_status else 'Deactivated'} user: {db_user.username} ({db_user.email})",
+        category="user_management",
+        ip_address=request.client.host,
+        user_agent=request.headers.get("user-agent")
+    )
+    
+    return {"message": f"User {'activated' if new_status else 'deactivated'} successfully", "user": updated_user}
+
 @router.get("/dashboard/stats", response_model=schemas.DashboardStats)
 def get_dashboard_stats(
     db: Session = Depends(get_db),
