@@ -182,6 +182,13 @@ const EmployeeDashboard = () => {
       action: () => navigate('/employee/inventory')
     },
     {
+      title: 'Customer Applications',
+      description: 'Review and manage storage applications',
+      icon: Users,
+      color: 'from-indigo-500 to-indigo-600',
+      action: () => navigate('/employee/applications')
+    },
+    {
       title: 'Time Tracker',
       description: 'Log work hours and breaks',
       icon: Clock,
@@ -257,7 +264,7 @@ const EmployeeDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           {quickActions.map((action, index) => (
             <button
               key={index}
