@@ -25,6 +25,7 @@ import EmployeeInventory from './pages/employee/Inventory'
 import EmployeeReports from './pages/employee/Reports'
 import EmployeeTimeTracker from './pages/employee/TimeTracker'
 import EmployeeSettings from './pages/employee/Settings'
+import CustomerApplications from './pages/employee/CustomerApplications'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminUsers from './pages/admin/Users'
 import AdminAssignments from './pages/admin/Assignments'
@@ -196,6 +197,11 @@ const AppWithScrolling = () => {
           <Route path="/employee/settings" element={
             <ProtectedRoute allowedRoles={['employee', 'admin']}>
               <EmployeeSettings />
+            </ProtectedRoute>
+          } />
+          <Route path="/employee/applications" element={
+            <ProtectedRoute allowedRoles={['employee', 'admin']}>
+              <CustomerApplications />
             </ProtectedRoute>
           } />
 

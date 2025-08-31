@@ -17,6 +17,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import customerApplicationService from '../../services/customerApplications';
 
 const ApplyToStore = () => {
   const navigate = useNavigate();
@@ -108,11 +109,54 @@ const ApplyToStore = () => {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Validate required fields
+      if (!formData.fullName || !formData.email || !formData.phone || !formData.itemType || !formData.storageType) {
+        throw new Error('Please fill in all required fields');
+      }
+
+      if (!formData.identificationDoc) {
+        throw new Error('Identification document is required');
+      }
+
+      // Prepare application data for submission
+      const applicationData = {
+        // Personal Information
+        full_name: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address || '',
+        
+        // Business Information
+        is_business_account: formData.isBusinessAccount,
+        business_name: formData.businessName || '',
+        business_type: formData.businessType || '',
+        
+        // Storage Requirements
+        item_type: formData.itemType,
+        estimated_volume: formData.estimatedVolume || '',
+        storage_type: formData.storageType,
+        access_frequency: formData.accessFrequency || '',
+        storage_duration: formData.storageDuration || '',
+        special_requirements: formData.specialRequirements || '',
+        
+        // Additional Services
+        insurance_required: formData.insuranceRequired,
+        packing_services: formData.packingServices,
+        transportation_needed: formData.transportationNeeded
+      };
+
+      // Submit application with files
+      const result = await customerApplicationService.submitApplication(
+        applicationData,
+        formData.inventoryList,
+        formData.identificationDoc
+      );
+
+      console.log('Application submitted successfully:', result);
       setApplicationSubmitted(true);
     } catch (error) {
       console.error('Error submitting application:', error);
+      alert(error.message || 'Failed to submit application. Please try again.');
     } finally {
       setLoading(false);
     }

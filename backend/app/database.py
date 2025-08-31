@@ -104,6 +104,51 @@ class UserActivity(Base):
     # Relationships
     user = relationship("User")
 
+class CustomerApplication(Base):
+    __tablename__ = "customer_applications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    # Personal Information
+    full_name = Column(String, nullable=False)
+    email = Column(String, nullable=False)
+    phone = Column(String, nullable=False)
+    address = Column(Text)
+    
+    # Business Information
+    is_business_account = Column(Boolean, default=False)
+    business_name = Column(String)
+    business_type = Column(String)
+    
+    # Storage Requirements
+    item_type = Column(String, nullable=False)
+    estimated_volume = Column(String)
+    storage_type = Column(String, nullable=False)
+    access_frequency = Column(String)
+    storage_duration = Column(String)
+    special_requirements = Column(Text)
+    
+    # Additional Services
+    insurance_required = Column(Boolean, default=False)
+    packing_services = Column(Boolean, default=False)
+    transportation_needed = Column(Boolean, default=False)
+    
+    # Document URLs (stored in Cloudinary)
+    inventory_list_url = Column(String)
+    identification_doc_url = Column(String)
+    
+    # Application Status
+    status = Column(String, default="pending")  # pending, approved, rejected, under_review
+    employee_notes = Column(Text)
+    reviewed_by = Column(Integer, ForeignKey("users.id"))
+    review_date = Column(DateTime)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
+
 def get_db():
     db = SessionLocal()
     try:
