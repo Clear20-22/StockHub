@@ -36,37 +36,37 @@ api.interceptors.response.use(
   }
 );
 
-// Auth API - Updated to use MongoDB endpoints
+// Auth API - Using SQLite endpoints only
 export const authAPI = {
-  login: (credentials) => api.post('/api/mongo/auth/login', credentials),
-  register: (userData) => api.post('/api/mongo/auth/register', userData),
-  getCurrentUser: () => api.get('/api/mongo/auth/me'),
+  login: (credentials) => api.post('/api/auth/login', credentials),
+  register: (userData) => api.post('/api/auth/register', userData),
+  getCurrentUser: () => api.get('/api/users/me'),
 };
 
-// Users API
+// Users API - Using SQLite endpoints only
 export const usersAPI = {
-  getUsers: (params = {}) => api.get('/api/mongo/auth/admin/users', { params }), // MongoDB users endpoint
-  getUser: (id) => api.get(`/api/mongo/auth/admin/users/${id}`), // MongoDB get user by ID
-  createUser: (data) => api.post('/api/mongo/auth/admin/create-user', data), // MongoDB admin create user
-  updateUser: (id, data) => api.put(`/api/mongo/auth/admin/users/${id}`, data), // MongoDB update user
-  updateMe: (data) => api.put('/api/users/me', data), // Keep SQLite for current user updates
-  deleteUser: (id) => api.delete(`/api/mongo/auth/admin/users/${id}`), // MongoDB delete user
-  toggleUserStatus: (id) => api.patch(`/api/mongo/auth/admin/users/${id}/toggle-active`), // Toggle active status
-  getUserActivities: (id, params = {}) => api.get(`/api/users/${id}/activities`, { params }), // Keep SQLite for activities
-  getDashboardStats: () => api.get('/api/users/dashboard/stats'), // Keep SQLite for dashboard stats
+  getUsers: (params = {}) => api.get('/api/users', { params }),
+  getUser: (id) => api.get(`/api/users/${id}`),
+  createUser: (data) => api.post('/api/users', data),
+  updateUser: (id, data) => api.put(`/api/users/${id}`, data),
+  updateMe: (data) => api.put('/api/users/me', data),
+  deleteUser: (id) => api.delete(`/api/users/${id}`),
+  toggleUserStatus: (id) => api.patch(`/api/users/${id}/toggle-active`),
+  getUserActivities: (id, params = {}) => api.get(`/api/users/${id}/activities`, { params }),
+  getDashboardStats: () => api.get('/api/users/dashboard/stats'),
 };
 
-// Goods API - Using MongoDB endpoints
+// Goods API - Using SQLite endpoints only
 export const goodsAPI = {
-  getGoods: (params = {}) => api.get('/api/mongo/goods', { params }),
-  getMyGoods: (params = {}) => api.get('/api/mongo/goods/my-goods', { params }),
-  getGood: (id) => api.get(`/api/mongo/goods/${id}`),
-  createGood: (data) => api.post('/api/mongo/goods', data),
-  updateGood: (id, data) => api.put(`/api/mongo/goods/${id}`, data),
-  deleteGood: (id) => api.delete(`/api/mongo/goods/${id}`),
-  updateStock: (id, data) => api.put(`/api/mongo/goods/${id}/stock`, data),
-  exportGoods: (params = {}) => api.get('/api/mongo/goods/export', { params, responseType: 'blob' }),
-  importGoods: (data) => api.post('/api/mongo/goods/import', data),
+  getGoods: (params = {}) => api.get('/api/goods', { params }),
+  getMyGoods: (params = {}) => api.get('/api/goods/my-goods', { params }),
+  getGood: (id) => api.get(`/api/goods/${id}`),
+  createGood: (data) => api.post('/api/goods', data),
+  updateGood: (id, data) => api.put(`/api/goods/${id}`, data),
+  deleteGood: (id) => api.delete(`/api/goods/${id}`),
+  updateStock: (id, data) => api.put(`/api/goods/${id}/stock`, data),
+  exportGoods: (params = {}) => api.get('/api/goods/export', { params, responseType: 'blob' }),
+  importGoods: (data) => api.post('/api/goods/import', data),
 };
 
 // Branches API
