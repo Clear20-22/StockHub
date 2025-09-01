@@ -41,6 +41,13 @@ def update_user(db: Session, user_id: int, user_update: UserUpdate):
     db_user = db.query(User).filter(User.id == user_id).first()
     if db_user:
         update_data = user_update.dict(exclude_unset=True)
+        
+        # Handle password hashing if password is being updated
+        if 'password' in update_data:
+            password = update_data.pop('password')
+            if password:  # Only update if password is not empty
+                update_data['hashed_password'] = get_password_hash(password)
+        
         for field, value in update_data.items():
             setattr(db_user, field, value)
         db.commit()

@@ -11,11 +11,12 @@ import {
 } from 'lucide-react';
 import ManageUsers from './ManageUsers';
 import ManageGoods from './ManageGoods';
+import ManageBranches from './ManageBranches';
 import AdminAssignments from './Assignments';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'manage-users', 'manage-goods', or 'assignments'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'manage-users', 'manage-goods', 'manage-branches', or 'assignments'
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalGoods: 0,
@@ -109,6 +110,11 @@ const AdminDashboard = () => {
     return <ManageGoods onBack={() => setCurrentView('dashboard')} />;
   }
 
+  // Render ManageBranches view
+  if (currentView === 'manage-branches') {
+    return <ManageBranches onBack={() => setCurrentView('dashboard')} />;
+  }
+
   // Render Assignments view
   if (currentView === 'assignments') {
     return <AdminAssignments onBack={() => setCurrentView('dashboard')} />;
@@ -192,7 +198,10 @@ const AdminDashboard = () => {
                   <span className="text-green-700 font-medium">Manage Goods</span>
                 </div>
               </button>
-              <button className="w-full text-left p-3 rounded-lg bg-purple-50 hover:bg-purple-100 transition-colors duration-200">
+              <button 
+                onClick={() => setCurrentView('manage-branches')}
+                className="w-full text-left p-3 rounded-lg bg-purple-50 hover:bg-purple-100 transition-colors duration-200"
+              >
                 <div className="flex items-center">
                   <Building2 className="w-5 h-5 text-purple-600 mr-3" />
                   <span className="text-purple-700 font-medium">Manage Branches</span>

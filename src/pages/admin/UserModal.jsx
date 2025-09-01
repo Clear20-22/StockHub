@@ -105,7 +105,6 @@ const UserModal = ({ user, branches, mode, onClose, onSave }) => {
     
     try {
       const submitData = {
-        username: formData.username.trim(),
         first_name: formData.first_name.trim(),
         last_name: formData.last_name.trim(),
         email: formData.email.trim(),
@@ -113,6 +112,11 @@ const UserModal = ({ user, branches, mode, onClose, onSave }) => {
         branch_id: formData.branch_id || null,
         is_active: formData.is_active
       };
+
+      // Add username only for new users
+      if (mode === 'add') {
+        submitData.username = formData.username.trim();
+      }
 
       // Add password only if provided
       if (formData.password) {

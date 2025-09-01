@@ -24,7 +24,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-const ManageBranches = () => {
+const ManageBranches = ({ onBack }) => {
   const navigate = useNavigate();
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -294,7 +294,7 @@ const ManageBranches = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button 
-                onClick={() => navigate('/admin/dashboard')}
+                onClick={onBack || (() => navigate('/admin/dashboard'))}
                 className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
