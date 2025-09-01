@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from app.database import User, Goods, Branch, Assignment, UserActivity
 from app.schemas import UserCreate, UserUpdate, GoodsCreate, GoodsUpdate, BranchCreate, BranchUpdate, AssignmentCreate, AssignmentUpdate, UserActivityCreate
@@ -147,13 +147,13 @@ def delete_branch(db: Session, branch_id: int):
 
 # Assignment CRUD
 def get_assignments(db: Session, skip: int = 0, limit: int = 100, employee_id: Optional[int] = None):
-    query = db.query(Assignment)
+    query = db.query(Assignment).options(joinedload(Assignment.employee), joinedload(Assignment.branch))
     if employee_id:
         query = query.filter(Assignment.employee_id == employee_id)
     return query.offset(skip).limit(limit).all()
 
 def get_assignment(db: Session, assignment_id: int):
-    return db.query(Assignment).filter(Assignment.id == assignment_id).first()
+    return db.query(Assignment).options(joinedload(Assignment.employee), joinedload(Assignment.branch)).filter(Assignment.id == assignment_id).first()
 
 def create_assignment(db: Session, assignment: AssignmentCreate):
     db_assignment = Assignment(**assignment.dict())

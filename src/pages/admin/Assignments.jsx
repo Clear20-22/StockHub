@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usersAPI, branchesAPI, assignmentsAPI } from '../../services/api';
+import { useNotification } from '../../contexts/NotificationContext';
+import SearchableSelect from '../../components/SearchableSelect';
 import { 
   ArrowLeft,
   Plus,
@@ -26,6 +29,7 @@ import {
 
 const AdminAssignments = ({ onBack }) => {
   const navigate = useNavigate();
+  const { showNotification } = useNotification();
   const [assignments, setAssignments] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -40,13 +44,13 @@ const AdminAssignments = ({ onBack }) => {
 
   // New assignment form data
   const [newAssignment, setNewAssignment] = useState({
-    employeeId: '',
-    branchId: '',
-    role: '',
-    startDate: '',
-    endDate: '',
+    employee_id: '',
+    branch_id: '',
+    task: '',
     description: '',
-    priority: 'medium'
+    priority: 'medium',
+    due_date: '',
+    status: 'pending'
   });
 
   const roles = [
@@ -76,87 +80,28 @@ const AdminAssignments = ({ onBack }) => {
   const fetchAssignments = async () => {
     try {
       setLoading(true);
-      // In real app, this would be an API call
+      const response = await assignmentsAPI.getAssignments();
+      setAssignments(response.data || []);
+    } catch (error) {
+      console.error('Error fetching assignments:', error);
+      showNotification('Failed to fetch assignments', 'error');
+      // Fallback to mock data
       const mockAssignments = [
         {
           id: 1,
-          employeeId: 2,
-          employeeName: 'Jane Smith',
-          branchId: 1,
-          branchName: 'Main Warehouse',
-          role: 'Warehouse Manager',
-          startDate: '2024-01-15',
-          endDate: '2024-12-31',
-          status: 'active',
-          priority: 'high',
+          employee_id: 2,
+          employee: { first_name: 'Jane', last_name: 'Smith' },
+          branch_id: 1,
+          branch: { name: 'Main Warehouse' },
+          task: 'Warehouse Management',
           description: 'Oversee daily warehouse operations and manage inventory',
-          createdAt: '2024-01-10',
-          progress: 85
-        },
-        {
-          id: 2,
-          employeeId: 4,
-          employeeName: 'Mike Wilson',
-          branchId: 2,
-          branchName: 'Downtown Branch',
-          role: 'Inventory Specialist',
-          startDate: '2024-02-01',
-          endDate: '2024-06-30',
-          status: 'active',
-          priority: 'medium',
-          description: 'Conduct weekly inventory audits and maintain stock accuracy',
-          createdAt: '2024-01-25',
-          progress: 60
-        },
-        {
-          id: 3,
-          employeeId: 5,
-          employeeName: 'Sarah Johnson',
-          branchId: 3,
-          branchName: 'Northside Storage',
-          role: 'Quality Control',
-          startDate: '2024-01-20',
-          endDate: '2024-03-20',
-          status: 'completed',
-          priority: 'medium',
-          description: 'Quality inspection of incoming shipments',
-          createdAt: '2024-01-15',
-          progress: 100
-        },
-        {
-          id: 4,
-          employeeId: 6,
-          employeeName: 'David Brown',
-          branchId: 1,
-          branchName: 'Main Warehouse',
-          role: 'Forklift Operator',
-          startDate: '2024-03-01',
-          endDate: '2024-08-31',
-          status: 'pending',
-          priority: 'low',
-          description: 'Material handling and warehouse equipment operation',
-          createdAt: '2024-02-25',
-          progress: 0
-        },
-        {
-          id: 5,
-          employeeId: 7,
-          employeeName: 'Lisa Davis',
-          branchId: 4,
-          branchName: 'Eastside Hub',
-          role: 'Shipping Coordinator',
-          startDate: '2024-02-15',
-          endDate: '2024-04-15',
-          status: 'cancelled',
+          status: 'in_progress',
           priority: 'high',
-          description: 'Coordinate outbound shipments and delivery schedules',
-          createdAt: '2024-02-10',
-          progress: 25
+          due_date: '2024-12-31',
+          created_at: '2024-01-10'
         }
       ];
       setAssignments(mockAssignments);
-    } catch (error) {
-      console.error('Error fetching assignments:', error);
     } finally {
       setLoading(false);
     }
@@ -164,85 +109,131 @@ const AdminAssignments = ({ onBack }) => {
 
   const fetchEmployees = async () => {
     try {
-      // Mock employees data
-      const mockEmployees = [
-        { id: 2, name: 'Jane Smith', email: 'jane@stockhub.com' },
-        { id: 4, name: 'Mike Wilson', email: 'mike@stockhub.com' },
-        { id: 5, name: 'Sarah Johnson', email: 'sarah@stockhub.com' },
-        { id: 6, name: 'David Brown', email: 'david@stockhub.com' },
-        { id: 7, name: 'Lisa Davis', email: 'lisa@stockhub.com' },
-        { id: 8, name: 'Tom Anderson', email: 'tom@stockhub.com' },
-        { id: 9, name: 'Emily Wilson', email: 'emily@stockhub.com' }
-      ];
-      setEmployees(mockEmployees);
+      const response = await usersAPI.getUsers();
+      console.log('Fetched users:', response.data);
+      // Filter to get only employees (not customers or admins)
+      const employeeUsers = response.data.filter(user => user.role === 'employee');
+      console.log('Filtered employees:', employeeUsers);
+      // Add display_name for searchable dropdown
+      const employeesWithDisplayName = employeeUsers.map(employee => ({
+        ...employee,
+        display_name: `${employee.first_name} ${employee.last_name} (${employee.email})`
+      }));
+      setEmployees(employeesWithDisplayName);
+      console.log('Set employees with display names:', employeesWithDisplayName);
     } catch (error) {
       console.error('Error fetching employees:', error);
+      showNotification('Failed to fetch employees', 'error');
+      // Fallback to mock data if API fails
+      const mockEmployees = [
+        { 
+          id: 2, 
+          first_name: 'Jane', 
+          last_name: 'Smith', 
+          email: 'jane@stockhub.com', 
+          role: 'employee',
+          display_name: 'Jane Smith (jane@stockhub.com)'
+        },
+        { 
+          id: 4, 
+          first_name: 'Mike', 
+          last_name: 'Wilson', 
+          email: 'mike@stockhub.com', 
+          role: 'employee',
+          display_name: 'Mike Wilson (mike@stockhub.com)'
+        },
+        { 
+          id: 5, 
+          first_name: 'Sarah', 
+          last_name: 'Johnson', 
+          email: 'sarah@stockhub.com', 
+          role: 'employee',
+          display_name: 'Sarah Johnson (sarah@stockhub.com)'
+        }
+      ];
+      setEmployees(mockEmployees);
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchBranches = async () => {
     try {
-      // Mock branches data
+      const response = await branchesAPI.getBranches();
+      console.log('Fetched branches:', response.data);
+      setBranches(response.data || []);
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+      showNotification('Failed to fetch branches', 'error');
+      // Fallback to mock data if API fails
       const mockBranches = [
         { id: 1, name: 'Main Warehouse' },
         { id: 2, name: 'Downtown Branch' },
-        { id: 3, name: 'Northside Storage' },
-        { id: 4, name: 'Eastside Hub' }
+        { id: 3, name: 'Northside Storage' }
       ];
       setBranches(mockBranches);
-    } catch (error) {
-      console.error('Error fetching branches:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const filteredAssignments = assignments.filter(assignment => {
-    const matchesSearch = assignment.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         assignment.branchName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         assignment.role.toLowerCase().includes(searchTerm.toLowerCase());
+    const employeeName = assignment.employee ? `${assignment.employee.first_name} ${assignment.employee.last_name}` : '';
+    const branchName = assignment.branch ? assignment.branch.name : '';
+    const task = assignment.task || '';
+    
+    const matchesSearch = employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         branchName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         task.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = selectedStatus === 'all' || assignment.status === selectedStatus;
-    const matchesBranch = selectedBranch === 'all' || assignment.branchId.toString() === selectedBranch;
+    const matchesBranch = selectedBranch === 'all' || assignment.branch_id?.toString() === selectedBranch;
     
     return matchesSearch && matchesStatus && matchesBranch;
   });
 
   const handleAddAssignment = async () => {
+    // Validation
+    if (!newAssignment.employee_id || !newAssignment.branch_id || !newAssignment.task || !newAssignment.due_date) {
+      showNotification('Please fill in all required fields', 'error');
+      return;
+    }
+
     setActionLoading(true);
     try {
-      // In real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const employee = employees.find(e => e.id === parseInt(newAssignment.employeeId));
-      const branch = branches.find(b => b.id === parseInt(newAssignment.branchId));
-      
-      const newAssignmentData = {
-        id: assignments.length + 1,
-        employeeId: parseInt(newAssignment.employeeId),
-        employeeName: employee?.name || 'Unknown',
-        branchId: parseInt(newAssignment.branchId),
-        branchName: branch?.name || 'Unknown',
-        role: newAssignment.role,
-        startDate: newAssignment.startDate,
-        endDate: newAssignment.endDate,
-        status: 'pending',
-        priority: newAssignment.priority,
-        description: newAssignment.description,
-        createdAt: new Date().toISOString().split('T')[0],
-        progress: 0
+      const assignmentData = {
+        employee_id: parseInt(newAssignment.employee_id),
+        branch_id: parseInt(newAssignment.branch_id),
+        task: newAssignment.task,
+        description: newAssignment.description || '',
+        priority: newAssignment.priority || 'medium',
+        due_date: newAssignment.due_date ? `${newAssignment.due_date}T23:59:59` : null,
+        status: 'pending'
       };
+
+      console.log('Submitting assignment data:', assignmentData);
+      const response = await assignmentsAPI.createAssignment(assignmentData);
+      console.log('Assignment created successfully:', response);
       
-      setAssignments([...assignments, newAssignmentData]);
+      showNotification('Assignment created successfully', 'success');
       setShowAddModal(false);
       setNewAssignment({
-        employeeId: '',
-        branchId: '',
-        role: '',
-        startDate: '',
-        endDate: '',
+        employee_id: '',
+        branch_id: '',
+        task: '',
         description: '',
-        priority: 'medium'
+        priority: 'medium',
+        due_date: '',
+        status: 'pending'
       });
+      
+      // Refresh assignments list
+      await fetchAssignments();
     } catch (error) {
       console.error('Error adding assignment:', error);
+      console.error('Error details:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      const errorMessage = error.response?.data?.detail || 'Failed to create assignment';
+      showNotification(errorMessage, 'error');
     } finally {
       setActionLoading(false);
     }
@@ -254,16 +245,16 @@ const AdminAssignments = ({ onBack }) => {
       // In real app, this would be an API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const employee = employees.find(e => e.id === selectedAssignment.employeeId);
-      const branch = branches.find(b => b.id === selectedAssignment.branchId);
+      const employee = employees.find(e => e.id === selectedAssignment.employee_id);
+      const branch = branches.find(b => b.id === selectedAssignment.branch_id);
       
       setAssignments(assignments.map(assignment => 
         assignment.id === selectedAssignment.id 
           ? { 
               ...assignment, 
               ...selectedAssignment,
-              employeeName: employee?.name || assignment.employeeName,
-              branchName: branch?.name || assignment.branchName
+              employee: employee || assignment.employee,
+              branch: branch || assignment.branch
             }
           : assignment
       ));
@@ -515,30 +506,32 @@ const AdminAssignments = ({ onBack }) => {
                             </div>
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{assignment.employeeName}</div>
-                            <div className="text-sm text-gray-500">ID: {assignment.employeeId}</div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {assignment.employee ? `${assignment.employee.first_name} ${assignment.employee.last_name}` : 'Unknown'}
+                            </div>
+                            <div className="text-sm text-gray-500">ID: {assignment.employee_id}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{assignment.role}</div>
+                        <div className="text-sm font-medium text-gray-900">{assignment.task}</div>
                         <div className="text-sm text-gray-500 truncate max-w-xs">{assignment.description}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <Building2 className="h-4 w-4 text-gray-400 mr-2" />
-                          <span className="text-sm text-gray-900">{assignment.branchName}</span>
+                          <span className="text-sm text-gray-900">{assignment.branch?.name || 'Unknown'}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <div className="flex flex-col">
                           <div className="flex items-center">
                             <Calendar className="h-3 w-3 text-gray-400 mr-1" />
-                            <span className="text-xs">{new Date(assignment.startDate).toLocaleDateString()}</span>
+                            <span className="text-xs">Created: {new Date(assignment.created_at).toLocaleDateString()}</span>
                           </div>
                           <div className="flex items-center mt-1">
                             <Calendar className="h-3 w-3 text-gray-400 mr-1" />
-                            <span className="text-xs">{new Date(assignment.endDate).toLocaleDateString()}</span>
+                            <span className="text-xs">Due: {new Date(assignment.due_date).toLocaleDateString()}</span>
                           </div>
                         </div>
                       </td>
@@ -557,10 +550,10 @@ const AdminAssignments = ({ onBack }) => {
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div 
                             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${assignment.progress}%` }}
+                            style={{ width: `${assignment.progress || 0}%` }}
                           ></div>
                         </div>
-                        <span className="text-xs text-gray-500 mt-1">{assignment.progress}%</span>
+                        <span className="text-xs text-gray-500 mt-1">{assignment.progress || 0}%</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
@@ -614,46 +607,42 @@ const AdminAssignments = ({ onBack }) => {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Assignment</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Employee</label>
-                <select
-                  value={newAssignment.employeeId}
-                  onChange={(e) => setNewAssignment({...newAssignment, employeeId: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Select Employee</option>
-                  {employees.map(employee => (
-                    <option key={employee.id} value={employee.id}>{employee.name}</option>
-                  ))}
-                </select>
-              </div>
+              <SearchableSelect
+                value={newAssignment.employee_id}
+                onChange={(value) => setNewAssignment({...newAssignment, employee_id: value})}
+                options={employees}
+                placeholder="Select Employee"
+                label="Employee"
+                required
+                displayKey="display_name"
+                valueKey="id"
+                searchKeys={["first_name", "last_name", "email"]}
+                className=""
+              />
+
+              <SearchableSelect
+                value={newAssignment.branch_id}
+                onChange={(value) => setNewAssignment({...newAssignment, branch_id: value})}
+                options={branches}
+                placeholder="Select Branch"
+                label="Branch"
+                required
+                displayKey="name"
+                valueKey="id"
+                searchKeys={["name"]}
+                className=""
+              />
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                <select
-                  value={newAssignment.branchId}
-                  onChange={(e) => setNewAssignment({...newAssignment, branchId: e.target.value})}
+                <label className="block text-sm font-medium text-gray-700 mb-1">Task *</label>
+                <input
+                  type="text"
+                  value={newAssignment.task}
+                  onChange={(e) => setNewAssignment({...newAssignment, task: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Select Branch</option>
-                  {branches.map(branch => (
-                    <option key={branch.id} value={branch.id}>{branch.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select
-                  value={newAssignment.role}
-                  onChange={(e) => setNewAssignment({...newAssignment, role: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Select Role</option>
-                  {roles.map(role => (
-                    <option key={role} value={role}>{role}</option>
-                  ))}
-                </select>
+                  placeholder="Enter task title"
+                  required
+                />
               </div>
 
               <div>
@@ -670,22 +659,13 @@ const AdminAssignments = ({ onBack }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Due Date *</label>
                 <input
                   type="date"
-                  value={newAssignment.startDate}
-                  onChange={(e) => setNewAssignment({...newAssignment, startDate: e.target.value})}
+                  value={newAssignment.due_date}
+                  onChange={(e) => setNewAssignment({...newAssignment, due_date: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                <input
-                  type="date"
-                  value={newAssignment.endDate}
-                  onChange={(e) => setNewAssignment({...newAssignment, endDate: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
                 />
               </div>
             </div>
@@ -727,43 +707,39 @@ const AdminAssignments = ({ onBack }) => {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Assignment</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Employee</label>
-                <select
-                  value={selectedAssignment.employeeId}
-                  onChange={(e) => setSelectedAssignment({...selectedAssignment, employeeId: parseInt(e.target.value)})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  {employees.map(employee => (
-                    <option key={employee.id} value={employee.id}>{employee.name}</option>
-                  ))}
-                </select>
-              </div>
+              <SearchableSelect
+                value={selectedAssignment.employee_id}
+                onChange={(value) => setSelectedAssignment({...selectedAssignment, employee_id: parseInt(value)})}
+                options={employees}
+                placeholder="Select Employee"
+                label="Employee"
+                displayKey="display_name"
+                valueKey="id"
+                searchKeys={["first_name", "last_name", "email"]}
+                className=""
+              />
+
+              <SearchableSelect
+                value={selectedAssignment.branch_id}
+                onChange={(value) => setSelectedAssignment({...selectedAssignment, branch_id: parseInt(value)})}
+                options={branches}
+                placeholder="Select Branch"
+                label="Branch"
+                displayKey="name"
+                valueKey="id"
+                searchKeys={["name"]}
+                className=""
+              />
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                <select
-                  value={selectedAssignment.branchId}
-                  onChange={(e) => setSelectedAssignment({...selectedAssignment, branchId: parseInt(e.target.value)})}
+                <label className="block text-sm font-medium text-gray-700 mb-1">Task</label>
+                <input
+                  type="text"
+                  value={selectedAssignment.task || ''}
+                  onChange={(e) => setSelectedAssignment({...selectedAssignment, task: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  {branches.map(branch => (
-                    <option key={branch.id} value={branch.id}>{branch.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select
-                  value={selectedAssignment.role}
-                  onChange={(e) => setSelectedAssignment({...selectedAssignment, role: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  {roles.map(role => (
-                    <option key={role} value={role}>{role}</option>
-                  ))}
-                </select>
+                  placeholder="Enter task description"
+                />
               </div>
 
               <div>
@@ -799,28 +775,18 @@ const AdminAssignments = ({ onBack }) => {
                   type="number"
                   min="0"
                   max="100"
-                  value={selectedAssignment.progress}
-                  onChange={(e) => setSelectedAssignment({...selectedAssignment, progress: parseInt(e.target.value)})}
+                  value={selectedAssignment.progress || 0}
+                  onChange={(e) => setSelectedAssignment({...selectedAssignment, progress: parseInt(e.target.value) || 0})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
                 <input
                   type="date"
-                  value={selectedAssignment.startDate}
-                  onChange={(e) => setSelectedAssignment({...selectedAssignment, startDate: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                <input
-                  type="date"
-                  value={selectedAssignment.endDate}
-                  onChange={(e) => setSelectedAssignment({...selectedAssignment, endDate: e.target.value})}
+                  value={selectedAssignment.due_date || ''}
+                  onChange={(e) => setSelectedAssignment({...selectedAssignment, due_date: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>

@@ -149,6 +149,8 @@ class Assignment(AssignmentBase):
     branch_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
+    employee: Optional['User'] = None
+    branch: Optional['Branch'] = None
     
     class Config:
         from_attributes = True
