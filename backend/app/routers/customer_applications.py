@@ -11,7 +11,7 @@ import json
 
 from app.database import get_db, CustomerApplication
 from app.schemas import CustomerApplicationCreate, CustomerApplication as CustomerApplicationSchema, CustomerApplicationUpdate
-from .mongo_auth import get_current_user_from_token
+from .users import get_current_user
 
 # Configure Cloudinary
 cloudinary.config(
@@ -21,10 +21,6 @@ cloudinary.config(
 )
 
 router = APIRouter()
-
-async def get_current_user(current_user = Depends(get_current_user_from_token)):
-    """Get current user from MongoDB authentication"""
-    return current_user
 
 @router.post("/submit", response_model=CustomerApplicationSchema)
 async def submit_application(
@@ -129,7 +125,7 @@ async def get_all_applications(
     Get all customer applications (Employee access only)
     """
     # Check if user is employee or admin
-    if current_user.get("role") not in ["employee", "admin"]:
+    if current_user.role not in ["employee", "admin"]:
         raise HTTPException(status_code=403, detail="Access denied. Employee role required.")
     
     query = db.query(CustomerApplication)
@@ -150,7 +146,7 @@ async def get_application(
     Get a specific customer application by ID
     """
     # Check if user is employee or admin
-    if current_user.get("role") not in ["employee", "admin"]:
+    if current_user.role not in ["employee", "admin"]:
         raise HTTPException(status_code=403, detail="Access denied. Employee role required.")
     
     application = db.query(CustomerApplication).filter(CustomerApplication.id == application_id).first()
@@ -171,7 +167,7 @@ async def update_application(
     Update application status and add employee notes
     """
     # Check if user is employee or admin
-    if current_user.get("role") not in ["employee", "admin"]:
+    if current_user.role not in ["employee", "admin"]:
         raise HTTPException(status_code=403, detail="Access denied. Employee role required.")
     
     application = db.query(CustomerApplication).filter(CustomerApplication.id == application_id).first()
@@ -209,7 +205,7 @@ async def delete_application(
     """
     Delete a customer application (Admin only)
     """
-    if current_user.get("role") != "admin":
+    if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Access denied. Admin role required.")
     
     application = db.query(CustomerApplication).filter(CustomerApplication.id == application_id).first()
@@ -245,7 +241,7 @@ async def get_application_stats(
     """
     Get application statistics for dashboard
     """
-    if current_user.get("role") not in ["employee", "admin"]:
+    if current_user.role not in ["employee", "admin"]:
         raise HTTPException(status_code=403, detail="Access denied. Employee role required.")
     
     total_applications = db.query(CustomerApplication).count()
