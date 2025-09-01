@@ -79,8 +79,10 @@ const AdminAssignments = ({ onBack }) => {
 
   const fetchAssignments = async () => {
     try {
+      console.log('Fetching assignments...');
       setLoading(true);
       const response = await assignmentsAPI.getAssignments();
+      console.log('Assignments fetched:', response.data);
       setAssignments(response.data || []);
     } catch (error) {
       console.error('Error fetching assignments:', error);
@@ -102,8 +104,10 @@ const AdminAssignments = ({ onBack }) => {
         }
       ];
       setAssignments(mockAssignments);
+      console.log('Using fallback assignments data');
     } finally {
       setLoading(false);
+      console.log('Finished fetching assignments');
     }
   };
 
@@ -215,7 +219,8 @@ const AdminAssignments = ({ onBack }) => {
       console.log('Assignment created successfully:', response);
       
       showNotification('Assignment created successfully', 'success');
-      setShowAddModal(false);
+      
+      // Reset form
       setNewAssignment({
         employee_id: '',
         branch_id: '',
@@ -227,7 +232,9 @@ const AdminAssignments = ({ onBack }) => {
       });
       
       // Refresh assignments list
+      console.log('Refreshing assignments list...');
       await fetchAssignments();
+      console.log('Assignment form completed successfully');
     } catch (error) {
       console.error('Error adding assignment:', error);
       console.error('Error details:', error.response?.data);
@@ -236,6 +243,9 @@ const AdminAssignments = ({ onBack }) => {
       showNotification(errorMessage, 'error');
     } finally {
       setActionLoading(false);
+      // Always close the modal regardless of success or failure
+      console.log('Closing assignment modal...');
+      setShowAddModal(false);
     }
   };
 
