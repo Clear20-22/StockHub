@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { assignmentsAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { 
   ArrowLeft,
   Clock,
@@ -23,6 +26,8 @@ import {
 
 const EmployeeAssignments = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { showNotification } = useNotification();
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -35,94 +40,68 @@ const EmployeeAssignments = () => {
   const fetchAssignments = async () => {
     try {
       setLoading(true);
-      // Mock data - in real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Fetching assignments for user:', user?.id);
       
-      const mockAssignments = [
-        {
-          id: 1,
-          title: 'Inventory Count - Section A',
-          description: 'Complete inventory count for warehouse section A including all electronics items',
-          priority: 'high',
-          status: 'in-progress',
-          dueDate: '2024-08-22',
-          dueTime: '14:00',
-          startDate: '2024-08-21',
-          branch: 'Main Warehouse',
-          supervisor: 'Sarah Johnson',
-          completion: 75,
-          estimatedHours: 6,
-          actualHours: 4.5,
-          category: 'Inventory'
-        },
-        {
-          id: 2,
-          title: 'Quality Check - Batch #2024-089',
-          description: 'Perform quality inspection on incoming shipment batch #2024-089',
-          priority: 'medium',
-          status: 'pending',
-          dueDate: '2024-08-22',
-          dueTime: '16:30',
-          startDate: '2024-08-22',
-          branch: 'Main Warehouse',
-          supervisor: 'Mike Wilson',
-          completion: 0,
-          estimatedHours: 3,
-          actualHours: 0,
-          category: 'Quality Control'
-        },
-        {
-          id: 3,
-          title: 'Shipment Preparation',
-          description: 'Prepare outbound shipment for customer order #12345',
-          priority: 'high',
-          status: 'completed',
-          dueDate: '2024-08-21',
-          dueTime: '10:00',
-          startDate: '2024-08-21',
-          branch: 'Main Warehouse',
-          supervisor: 'David Brown',
-          completion: 100,
-          estimatedHours: 2,
-          actualHours: 1.8,
-          category: 'Shipping'
-        },
-        {
-          id: 4,
-          title: 'Equipment Maintenance',
-          description: 'Routine maintenance on forklift #FL-003',
-          priority: 'low',
-          status: 'scheduled',
-          dueDate: '2024-08-23',
-          dueTime: '09:00',
-          startDate: '2024-08-23',
-          branch: 'Main Warehouse',
-          supervisor: 'Lisa Davis',
-          completion: 0,
-          estimatedHours: 4,
-          actualHours: 0,
-          category: 'Maintenance'
-        },
-        {
-          id: 5,
-          title: 'Training Session - Safety Protocols',
-          description: 'Attend safety protocol training session',
-          priority: 'medium',
-          status: 'scheduled',
-          dueDate: '2024-08-24',
-          dueTime: '11:00',
-          startDate: '2024-08-24',
-          branch: 'Main Warehouse',
-          supervisor: 'Tom Anderson',
-          completion: 0,
-          estimatedHours: 2,
-          actualHours: 0,
-          category: 'Training'
-        }
-      ];
-      setAssignments(mockAssignments);
+      // Fetch assignments from the database
+      const response = await assignmentsAPI.getMyAssignments();
+      console.log('Assignments response:', response.data);
+      
+      if (response.data && Array.isArray(response.data)) {
+        // Transform the database data to match the component's expected format
+        const transformedAssignments = response.data.map(assignment => {
+          // Calculate completion percentage based on status
+          let completion = 0;
+          switch (assignment.status) {
+            case 'completed':
+              completion = 100;
+              break;
+            case 'in_progress':
+              completion = assignment.progress || 50; // Use progress if available, otherwise default to 50%
+              break;
+            case 'pending':
+              completion = 0;
+              break;
+            default:
+              completion = 0;
+          }
+
+          return {
+            id: assignment.id,
+            title: assignment.task || 'Assignment Task',
+            description: assignment.description || 'No description provided',
+            priority: assignment.priority || 'medium',
+            status: assignment.status || 'pending',
+            dueDate: assignment.due_date ? new Date(assignment.due_date).toISOString().split('T')[0] : '2024-12-31',
+            dueTime: assignment.due_date ? new Date(assignment.due_date).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '23:59',
+            startDate: assignment.created_at ? new Date(assignment.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            branch: assignment.branch?.name || 'Main Warehouse',
+            supervisor: assignment.supervisor || 'System Admin',
+            completion: completion,
+            estimatedHours: assignment.estimated_hours || 8,
+            actualHours: assignment.actual_hours || 0,
+            category: assignment.category || 'General'
+          };
+        });
+        
+        setAssignments(transformedAssignments);
+      } else {
+        console.warn('No assignments data received');
+        setAssignments([]);
+      }
     } catch (error) {
       console.error('Error fetching assignments:', error);
+      showNotification('Failed to load assignments', 'error');
+      
+      // Optional: Set empty assignments instead of fallback data
+      setAssignments([]);
+      
+      // If you want to show an error message to user
+      if (error.response?.status === 401) {
+        showNotification('Please log in to view your assignments', 'error');
+        navigate('/auth');
+      } else {
+        showNotification('Unable to load assignments at the moment', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -165,12 +144,43 @@ const EmployeeAssignments = () => {
     }
   };
 
-  const handleStatusUpdate = (assignmentId, newStatus) => {
-    setAssignments(prev => prev.map(assignment => 
-      assignment.id === assignmentId 
-        ? { ...assignment, status: newStatus }
-        : assignment
-    ));
+  const handleStatusUpdate = async (assignmentId, newStatus) => {
+    try {
+      console.log(`Updating assignment ${assignmentId} to status ${newStatus}`);
+      
+      // Update the assignment status via API
+      await assignmentsAPI.updateAssignment(assignmentId, { status: newStatus });
+      
+      // Update local state
+      setAssignments(prev => prev.map(assignment => {
+        if (assignment.id === assignmentId) {
+          let completion = assignment.completion;
+          // Update completion based on new status
+          switch (newStatus) {
+            case 'completed':
+              completion = 100;
+              break;
+            case 'in_progress':
+              completion = completion === 0 ? 50 : completion; // Start at 50% if was 0
+              break;
+            case 'pending':
+              // Keep current completion
+              break;
+            default:
+              // Keep current completion
+              break;
+          }
+          
+          return { ...assignment, status: newStatus, completion };
+        }
+        return assignment;
+      }));
+      
+      showNotification(`Assignment status updated to ${newStatus.replace('-', ' ')}`, 'success');
+    } catch (error) {
+      console.error('Error updating assignment status:', error);
+      showNotification('Failed to update assignment status', 'error');
+    }
   };
 
   const getFilterCounts = () => {
