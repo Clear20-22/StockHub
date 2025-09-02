@@ -21,6 +21,7 @@ const AdminDashboard = () => {
     totalAssignments: 0,
     pendingAssignments: 0
   });
+  const [recentActivities, setRecentActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -31,42 +32,100 @@ const AdminDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      setError('');
       
-      // Fetch basic data - remove complex parallel calls to avoid auth issues
-      try {
-        const usersRes = await usersAPI.getUsers();
-        const goodsRes = await goodsAPI.getGoods();
-        const branchesRes = await branchesAPI.getBranches();
+      // Fetch data from all APIs
+      const [usersRes, goodsRes, branchesRes, assignmentsRes] = await Promise.allSettled([
+        usersAPI.getUsers(),
+        goodsAPI.getGoods(), 
+        branchesAPI.getBranches(),
+        assignmentsAPI.getAssignments()
+      ]);
+
+      // Process users data
+      const totalUsers = usersRes.status === 'fulfilled' ? (usersRes.value.data?.length || 0) : 0;
+      
+      // Process goods data  
+      const totalGoods = goodsRes.status === 'fulfilled' ? (goodsRes.value.data?.length || 0) : 0;
+      
+      // Process branches data
+      const totalBranches = branchesRes.status === 'fulfilled' ? (branchesRes.value.data?.length || 0) : 0;
+      
+      // Process assignments data
+      let totalAssignments = 0;
+      let pendingAssignments = 0;
+      let activities = [];
+      
+      if (assignmentsRes.status === 'fulfilled' && assignmentsRes.value.data) {
+        const assignments = assignmentsRes.value.data;
+        totalAssignments = assignments.length;
+        pendingAssignments = assignments.filter(assignment => 
+          assignment.status === 'pending' || assignment.status === 'in_progress'
+        ).length;
         
-        setStats({
-          totalUsers: usersRes.data.length || 0,
-          totalGoods: goodsRes.data.length || 0,
-          totalBranches: branchesRes.data.length || 0,
-          totalAssignments: 0, // Simplified for now
-          pendingAssignments: 0
-        });
-      } catch (apiError) {
-        console.error('API Error:', apiError);
-        // Set basic fallback stats
-        setStats({
-          totalUsers: 4,
-          totalGoods: 4,
-          totalBranches: 3,
-          totalAssignments: 2,
-          pendingAssignments: 1
-        });
+        // Create recent activities from assignments data
+        activities = assignments
+          .sort((a, b) => new Date(b.created_at || b.id) - new Date(a.created_at || a.id))
+          .slice(0, 3)
+          .map(assignment => ({
+            id: assignment.id,
+            description: `Assignment #${assignment.id} ${assignment.status === 'pending' ? 'created' : 'updated'}`,
+            time: assignment.created_at ? new Date(assignment.created_at).toLocaleString() : 'Recently',
+            type: assignment.status === 'pending' ? 'new' : 'update'
+          }));
       }
+
+      // Add system activities
+      const systemActivities = [
+        {
+          id: 'users',
+          description: `${totalUsers} active users in system`,
+          time: 'Current',
+          type: 'info'
+        },
+        {
+          id: 'goods',
+          description: `${totalGoods} goods being managed`,
+          time: 'Current', 
+          type: 'info'
+        }
+      ];
+
+      setStats({
+        totalUsers,
+        totalGoods, 
+        totalBranches,
+        totalAssignments,
+        pendingAssignments
+      });
+
+      setRecentActivities([...activities, ...systemActivities].slice(0, 4));
+
+      // Log any API failures
+      if (usersRes.status === 'rejected') console.warn('Users API failed:', usersRes.reason);
+      if (goodsRes.status === 'rejected') console.warn('Goods API failed:', goodsRes.reason);
+      if (branchesRes.status === 'rejected') console.warn('Branches API failed:', branchesRes.reason);
+      if (assignmentsRes.status === 'rejected') console.warn('Assignments API failed:', assignmentsRes.reason);
+
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       setError('Unable to load some dashboard data');
-      // Set fallback stats
+      // Set fallback stats and activities
       setStats({
-        totalUsers: 4,
-        totalGoods: 4,
-        totalBranches: 3,
-        totalAssignments: 2,
-        pendingAssignments: 1
+        totalUsers: 0,
+        totalGoods: 0,
+        totalBranches: 0,
+        totalAssignments: 0,
+        pendingAssignments: 0
       });
+      setRecentActivities([
+        {
+          id: 'error',
+          description: 'Unable to load recent activity',
+          time: 'Error',
+          type: 'error'
+        }
+      ]);
     } finally {
       setLoading(false);
     }
@@ -201,19 +260,25 @@ const AdminDashboard = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">API Status</span>
-                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                  Healthy
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  error ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                }`}>
+                  {error ? 'Warning' : 'Healthy'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Database</span>
-                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                  Connected
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  error ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                }`}>
+                  {error ? 'Error' : 'Connected'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Last Backup</span>
-                <span className="text-gray-500 text-sm">2 hours ago</span>
+                <span className="text-gray-600">Last Updated</span>
+                <span className="text-gray-500 text-sm">
+                  {new Date().toLocaleTimeString()}
+                </span>
               </div>
             </div>
           </div>
@@ -221,27 +286,30 @@ const AdminDashboard = () => {
           <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 md:col-span-2">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
             <div className="space-y-3">
-              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">New user registered</p>
-                  <p className="text-xs text-gray-500">2 minutes ago</p>
+              {loading ? (
+                <div className="flex items-center justify-center p-8">
+                  <div className="text-gray-500">Loading activities...</div>
                 </div>
-              </div>
-              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">Inventory updated</p>
-                  <p className="text-xs text-gray-500">15 minutes ago</p>
+              ) : recentActivities.length === 0 ? (
+                <div className="flex items-center justify-center p-8">
+                  <div className="text-gray-500">No recent activity</div>
                 </div>
-              </div>
-              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">Assignment completed</p>
-                  <p className="text-xs text-gray-500">1 hour ago</p>
-                </div>
-              </div>
+              ) : (
+                recentActivities.map((activity, index) => (
+                  <div key={activity.id || index} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <div className={`w-2 h-2 rounded-full mr-3 ${
+                      activity.type === 'new' ? 'bg-blue-500' :
+                      activity.type === 'update' ? 'bg-green-500' :
+                      activity.type === 'error' ? 'bg-red-500' :
+                      'bg-gray-500'
+                    }`}></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">{activity.description}</p>
+                      <p className="text-xs text-gray-500">{activity.time}</p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
