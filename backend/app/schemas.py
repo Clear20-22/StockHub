@@ -141,6 +141,8 @@ class AssignmentUpdate(BaseModel):
     status: Optional[str] = None
     priority: Optional[str] = None
     due_date: Optional[datetime] = None
+    employee_id: Optional[int] = None
+    branch_id: Optional[int] = None
 
 class Assignment(AssignmentBase):
     id: int

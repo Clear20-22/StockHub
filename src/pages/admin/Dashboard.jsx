@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { usersAPI, goodsAPI, branchesAPI, assignmentsAPI } from '../../services/api';
 import { 
@@ -9,14 +10,10 @@ import {
   TrendingUp, 
   AlertCircle 
 } from 'lucide-react';
-import ManageUsers from './ManageUsers';
-import ManageGoods from './ManageGoods';
-import ManageBranches from './ManageBranches';
-import AdminAssignments from './Assignments';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'manage-users', 'manage-goods', 'manage-branches', or 'assignments'
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalGoods: 0,
@@ -100,26 +97,6 @@ const AdminDashboard = () => {
     );
   }
 
-  // Render ManageUsers view
-  if (currentView === 'manage-users') {
-    return <ManageUsers onBack={() => setCurrentView('dashboard')} />;
-  }
-
-  // Render ManageGoods view
-  if (currentView === 'manage-goods') {
-    return <ManageGoods onBack={() => setCurrentView('dashboard')} />;
-  }
-
-  // Render ManageBranches view
-  if (currentView === 'manage-branches') {
-    return <ManageBranches onBack={() => setCurrentView('dashboard')} />;
-  }
-
-  // Render Assignments view
-  if (currentView === 'assignments') {
-    return <AdminAssignments onBack={() => setCurrentView('dashboard')} />;
-  }
-
   return (
     <div className="min-h-screen py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -181,7 +158,7 @@ const AdminDashboard = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
             <div className="space-y-3">
               <button 
-                onClick={() => setCurrentView('manage-users')}
+                onClick={() => navigate('/admin/manage-users')}
                 className="w-full text-left p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors duration-200"
               >
                 <div className="flex items-center">
@@ -190,7 +167,7 @@ const AdminDashboard = () => {
                 </div>
               </button>
               <button 
-                onClick={() => setCurrentView('manage-goods')}
+                onClick={() => navigate('/admin/manage-goods')}
                 className="w-full text-left p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors duration-200"
               >
                 <div className="flex items-center">
@@ -199,7 +176,7 @@ const AdminDashboard = () => {
                 </div>
               </button>
               <button 
-                onClick={() => setCurrentView('manage-branches')}
+                onClick={() => navigate('/admin/manage-branches')}
                 className="w-full text-left p-3 rounded-lg bg-purple-50 hover:bg-purple-100 transition-colors duration-200"
               >
                 <div className="flex items-center">
@@ -208,7 +185,7 @@ const AdminDashboard = () => {
                 </div>
               </button>
               <button 
-                onClick={() => setCurrentView('assignments')}
+                onClick={() => navigate('/admin/assignments')}
                 className="w-full text-left p-3 rounded-lg bg-orange-50 hover:bg-orange-100 transition-colors duration-200"
               >
                 <div className="flex items-center">

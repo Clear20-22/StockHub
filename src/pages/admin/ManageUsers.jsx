@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { usersAPI, branchesAPI } from '../../services/api';
@@ -17,7 +18,8 @@ import {
   ChevronRight,
   Activity,
   Shield,
-  Building2
+  Building2,
+  ArrowLeft
 } from 'lucide-react';
 import AdminProtectedComponent from '../../components/admin/AdminProtectedComponent';
 import UserModal from './UserModal';
@@ -25,6 +27,7 @@ import UserActivityModal from './UserActivityModal';
 
 const ManageUsers = ({ onBack }) => {
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
   const { success, error } = useNotification();
   const [users, setUsers] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -225,12 +228,13 @@ const ManageUsers = ({ onBack }) => {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <button
-                onClick={onBack}
-                className="mr-4 p-2 text-gray-600 hover:text-gray-900 transition-colors"
+            <div className="flex items-center space-x-4">
+              <button 
+                onClick={onBack || (() => navigate('/admin/dashboard'))}
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                title="Back to Dashboard"
               >
-                <ChevronLeft className="w-6 h-6" />
+                <ChevronLeft className="h-4 w-4" />
               </button>
               <div>
                 <h1 className="text-4xl font-bold text-gray-900 mb-2">Manage Users</h1>

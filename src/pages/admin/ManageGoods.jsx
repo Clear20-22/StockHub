@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { goodsAPI, branchesAPI } from '../../services/api';
@@ -15,6 +16,7 @@ import {
   Download,
   Upload,
   ArrowLeft,
+  ChevronLeft,
   Eye,
   Calendar,
   Building2,
@@ -28,6 +30,7 @@ import AdminProtectedComponent from '../../components/admin/AdminProtectedCompon
 
 const ManageGoods = ({ onBack }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { showNotification } = useNotification();
 
   // State management
@@ -255,12 +258,13 @@ const ManageGoods = ({ onBack }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="mb-8 flex items-center justify-between">
-            <div className="flex items-center">
-              <button
-                onClick={onBack}
-                className="mr-4 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            <div className="flex items-center space-x-4">
+              <button 
+                onClick={onBack || (() => navigate('/admin/dashboard'))}
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                title="Back to Dashboard"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ChevronLeft className="h-4 w-4" />
               </button>
               <div>
                 <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center">

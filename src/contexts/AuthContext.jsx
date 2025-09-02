@@ -12,7 +12,11 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    // Try to get user from localStorage on initialization
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
@@ -28,10 +32,18 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = async () => {
     try {
       const response = await authAPI.getCurrentUser();
-      setUser(response.data);
+      const userData = response.data;
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
     } catch (error) {
       console.error('Error fetching user:', error);
-      logout();
+      // Only logout if it's actually an auth error, not a network error
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        logout();
+      } else {
+        console.log('Network error during user fetch, keeping existing auth state');
+        // For network errors, keep the current auth state but stop loading
+      }
     } finally {
       setLoading(false);
     }
@@ -43,6 +55,7 @@ export const AuthProvider = ({ children }) => {
       const { access_token, user: userData } = response.data;
       
       localStorage.setItem('token', access_token);
+      localStorage.setItem('user', JSON.stringify(userData));
       setToken(access_token);
       setUser(userData);
       
@@ -71,6 +84,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setToken(null);
     setUser(null);
   };

@@ -47,6 +47,17 @@ def read_users(
     users = crud.get_users(db, skip=skip, limit=limit)
     return users
 
+@router.get("/employees", response_model=List[schemas.User])
+def get_employees(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Get all employees"""
+    employees = crud.get_users_by_role(db, role="employee", skip=skip, limit=limit)
+    return employees
+
 @router.get("/{user_id}", response_model=schemas.User)
 def read_user(
     user_id: int,

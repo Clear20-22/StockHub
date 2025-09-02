@@ -69,6 +69,9 @@ def test_get_assignments(token):
     if response.status_code == 200:
         assignments = response.json()
         print(f"Found {len(assignments)} assignments")
+        if assignments:
+            print("First assignment structure:")
+            print(json.dumps(assignments[0], indent=2))
         return assignments
     else:
         print(f"Failed to get assignments: {response.status_code} - {response.text}")

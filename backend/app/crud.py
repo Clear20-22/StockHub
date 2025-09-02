@@ -19,6 +19,9 @@ def get_user_by_email(db: Session, email: str):
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(User).offset(skip).limit(limit).all()
 
+def get_users_by_role(db: Session, role: str, skip: int = 0, limit: int = 100):
+    return db.query(User).filter(User.role == role).offset(skip).limit(limit).all()
+
 def create_user(db: Session, user: UserCreate):
     hashed_password = get_password_hash(user.password)
     db_user = User(

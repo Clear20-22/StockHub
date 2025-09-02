@@ -5,6 +5,7 @@ import { useNotification } from '../../contexts/NotificationContext';
 import SearchableSelect from '../../components/SearchableSelect';
 import { 
   ArrowLeft,
+  ChevronLeft,
   Plus,
   Search,
   User,
@@ -72,10 +73,48 @@ const AdminAssignments = ({ onBack }) => {
   ];
 
   useEffect(() => {
-    fetchAssignments();
     fetchEmployees();
     fetchBranches();
+    fetchAssignments();
   }, []);
+
+  // Refresh assignments when employees or branches are updated to populate missing relationships
+  useEffect(() => {
+    if (employees.length > 0 && branches.length > 0 && assignments.length > 0) {
+      console.log('Updating assignments with employee and branch details...');
+      const assignmentsWithDetails = assignments.map(assignment => {
+        let employee = assignment.employee;
+        let branch = assignment.branch;
+        
+        // If employee info is missing, find it from employees list
+        if (!employee && assignment.employee_id) {
+          employee = employees.find(emp => emp.id === assignment.employee_id);
+        }
+        
+        // If branch info is missing, find it from branches list
+        if (!branch && assignment.branch_id) {
+          branch = branches.find(br => br.id === assignment.branch_id);
+        }
+        
+        return {
+          ...assignment,
+          employee: employee || null,
+          branch: branch || null
+        };
+      });
+      
+      // Only update if there are actual changes
+      const hasChanges = assignmentsWithDetails.some((assignment, index) => 
+        assignments[index].employee !== assignment.employee ||
+        assignments[index].branch !== assignment.branch
+      );
+      
+      if (hasChanges) {
+        console.log('Updating assignments with populated relationship data');
+        setAssignments(assignmentsWithDetails);
+      }
+    }
+  }, [employees, branches]);
 
   const fetchAssignments = async () => {
     try {
@@ -252,28 +291,51 @@ const AdminAssignments = ({ onBack }) => {
   const handleEditAssignment = async () => {
     setActionLoading(true);
     try {
-      // In real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Updating assignment:', selectedAssignment);
       
-      const employee = employees.find(e => e.id === selectedAssignment.employee_id);
-      const branch = branches.find(b => b.id === selectedAssignment.branch_id);
+      // Prepare update data
+      const updateData = {
+        task: selectedAssignment.task,
+        description: selectedAssignment.description,
+        priority: selectedAssignment.priority,
+        status: selectedAssignment.status,
+        due_date: selectedAssignment.due_date ? `${selectedAssignment.due_date}T23:59:59` : null,
+        employee_id: parseInt(selectedAssignment.employee_id),
+        branch_id: parseInt(selectedAssignment.branch_id)
+      };
+
+      console.log('Sending update data:', updateData);
+      const response = await assignmentsAPI.updateAssignment(selectedAssignment.id, updateData);
+      console.log('Assignment updated successfully:', response);
       
-      setAssignments(assignments.map(assignment => 
-        assignment.id === selectedAssignment.id 
-          ? { 
-              ...assignment, 
-              ...selectedAssignment,
-              employee: employee || assignment.employee,
-              branch: branch || assignment.branch
-            }
-          : assignment
-      ));
+      showNotification('Assignment updated successfully', 'success');
+      
+      // Refresh assignments list first
+      console.log('Refreshing assignments list...');
+      await fetchAssignments();
+      console.log('Assignments list refreshed');
+      
+      // Then close modal and clear selected assignment
       setShowEditModal(false);
       setSelectedAssignment(null);
+      
+      // Additional safeguard - ensure modal closes
+      setTimeout(() => {
+        setShowEditModal(false);
+        setSelectedAssignment(null);
+      }, 100);
     } catch (error) {
       console.error('Error updating assignment:', error);
+      console.error('Error details:', error.response?.data);
+      const errorMessage = error.response?.data?.detail || 'Failed to update assignment';
+      showNotification(errorMessage, 'error');
+      
+      // Close modal even on error
+      setShowEditModal(false);
+      setSelectedAssignment(null);
     } finally {
       setActionLoading(false);
+      console.log('Edit assignment action completed');
     }
   };
 
@@ -281,20 +343,36 @@ const AdminAssignments = ({ onBack }) => {
     if (window.confirm('Are you sure you want to delete this assignment?')) {
       setActionLoading(true);
       try {
-        // In real app, this would be an API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setAssignments(assignments.filter(assignment => assignment.id !== assignmentId));
+        console.log('Deleting assignment:', assignmentId);
+        
+        await assignmentsAPI.deleteAssignment(assignmentId);
+        console.log('Assignment deleted successfully');
+        
+        showNotification('Assignment deleted successfully', 'success');
+        
+        // Refresh assignments list
+        await fetchAssignments();
       } catch (error) {
         console.error('Error deleting assignment:', error);
+        console.error('Error details:', error.response?.data);
+        const errorMessage = error.response?.data?.detail || 'Failed to delete assignment';
+        showNotification(errorMessage, 'error');
       } finally {
         setActionLoading(false);
       }
     }
   };
 
+  // Helper function to format date for input field
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
+      case 'in_progress': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'completed': return 'bg-blue-100 text-blue-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
@@ -304,7 +382,7 @@ const AdminAssignments = ({ onBack }) => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'active': return <CheckCircle className="h-4 w-4" />;
+      case 'in_progress': return <CheckCircle className="h-4 w-4" />;
       case 'pending': return <Clock className="h-4 w-4" />;
       case 'completed': return <CheckCircle className="h-4 w-4" />;
       case 'cancelled': return <XCircle className="h-4 w-4" />;
@@ -337,10 +415,10 @@ const AdminAssignments = ({ onBack }) => {
             <div className="flex items-center space-x-4">
               <button 
                 onClick={() => onBack ? onBack() : navigate('/admin/dashboard')}
-                className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                title="Back to Dashboard"
               >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Dashboard
+                <ChevronLeft className="h-4 w-4" />
               </button>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Employee Assignments</h1>
@@ -433,7 +511,7 @@ const AdminAssignments = ({ onBack }) => {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="all">All Status</option>
-                <option value="active">Active</option>
+                <option value="in_progress">In Progress</option>
                 <option value="pending">Pending</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
@@ -475,7 +553,7 @@ const AdminAssignments = ({ onBack }) => {
               <span className="ml-3 text-gray-600">Loading assignments...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-auto max-h-64 md:max-h-80 lg:max-h-96 xl:max-h-[32rem]" style={{scrollbarWidth: 'thin'}}>
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -760,7 +838,7 @@ const AdminAssignments = ({ onBack }) => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="pending">Pending</option>
-                  <option value="active">Active</option>
+                  <option value="in_progress">In Progress</option>
                   <option value="completed">Completed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
@@ -795,7 +873,7 @@ const AdminAssignments = ({ onBack }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
                 <input
                   type="date"
-                  value={selectedAssignment.due_date || ''}
+                  value={formatDateForInput(selectedAssignment.due_date)}
                   onChange={(e) => setSelectedAssignment({...selectedAssignment, due_date: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { branchAPI } from '../../services/branches';
 import { 
   ArrowLeft,
+  ChevronLeft,
   Plus,
   Search,
   Building2,
@@ -295,10 +296,10 @@ const ManageBranches = ({ onBack }) => {
             <div className="flex items-center space-x-4">
               <button 
                 onClick={onBack || (() => navigate('/admin/dashboard'))}
-                className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                title="Back to Dashboard"
               >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Dashboard
+                <ChevronLeft className="h-4 w-4" />
               </button>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Manage Branches</h1>

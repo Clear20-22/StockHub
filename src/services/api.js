@@ -29,8 +29,16 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Only redirect to login if we're not already on login/register pages
+      const currentPath = window.location.pathname;
+      if (!currentPath.includes('/login') && !currentPath.includes('/register')) {
+        console.log('401 error - redirecting to login from:', currentPath);
+        localStorage.removeItem('token');
+        // Use a slight delay to prevent immediate redirects during page load
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 100);
+      }
     }
     return Promise.reject(error);
   }
