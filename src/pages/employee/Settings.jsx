@@ -45,8 +45,7 @@ const EmployeeSettings = () => {
     push: true,
     sms: false,
     assignments: true,
-    reminders: true,
-    reports: false
+    reminders: true
   });
 
   const [profile, setProfile] = useState({
@@ -422,7 +421,6 @@ const EmployeeSettings = () => {
                   <p className="text-sm font-medium text-gray-900 capitalize">
                     {key === 'assignments' ? 'New Assignments' : 
                      key === 'reminders' ? 'Task Reminders' : 
-                     key === 'reports' ? 'Weekly Reports' : 
                      key}
                   </p>
                   <p className="text-sm text-gray-600">
@@ -431,7 +429,7 @@ const EmployeeSettings = () => {
                      key === 'sms' ? 'Receive SMS notifications' :
                      key === 'assignments' ? 'Get notified when new tasks are assigned' :
                      key === 'reminders' ? 'Receive reminders for upcoming deadlines' :
-                     'Get weekly performance and activity reports'}
+                     'Receive notifications'}
                   </p>
                 </div>
               </div>

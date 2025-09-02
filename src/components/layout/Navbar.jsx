@@ -88,10 +88,9 @@ const Navbar = () => {
     if (user?.role === 'employee') {
       return [
         ...baseItems,
-        { name: 'My Tasks', path: '/employee/assignments', icon: ClipboardList },
+        { name: 'My Assignments', path: '/employee/assignments', icon: ClipboardList },
+        { name: 'Applications', path: '/employee/applications', icon: Users },
         { name: 'Inventory', path: '/employee/inventory', icon: Package },
-        { name: 'Reports', path: '/employee/reports', icon: TrendingUp },
-        { name: 'Time Tracker', path: '/employee/timetracker', icon: CheckCircle },
       ];
     }
 

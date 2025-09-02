@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { goodsAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { 
   ArrowLeft,
   Package,
@@ -25,6 +28,8 @@ import {
 
 const EmployeeInventory = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { showNotification } = useNotification();
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,109 +39,75 @@ const EmployeeInventory = () => {
 
   useEffect(() => {
     fetchInventory();
-  }, []);
+  }, [searchTerm, categoryFilter]);
 
   const fetchInventory = async () => {
     try {
       setLoading(true);
-      // Mock data - in real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Fetching inventory for employee:', user?.id);
       
-      const mockInventory = [
-        {
-          id: 1,
-          name: 'Wireless Bluetooth Headphones',
-          sku: 'WBH-001',
-          category: 'Electronics',
-          quantity: 45,
-          minQuantity: 10,
-          maxQuantity: 100,
-          price: 99.99,
-          location: 'A-1-01',
-          status: 'in-stock',
-          lastUpdated: '2024-08-21',
-          supplier: 'TechSupply Co.',
-          description: 'High-quality wireless Bluetooth headphones with noise cancellation'
-        },
-        {
-          id: 2,
-          name: 'Office Chair Pro',
-          sku: 'OCP-002',
-          category: 'Furniture',
-          quantity: 8,
-          minQuantity: 15,
-          maxQuantity: 50,
-          price: 299.99,
-          location: 'B-2-03',
-          status: 'low-stock',
-          lastUpdated: '2024-08-20',
-          supplier: 'OfficeMax Ltd.',
-          description: 'Ergonomic office chair with lumbar support'
-        },
-        {
-          id: 3,
-          name: 'Industrial Safety Helmet',
-          sku: 'ISH-003',
-          category: 'Safety',
-          quantity: 0,
-          minQuantity: 20,
-          maxQuantity: 200,
-          price: 45.50,
-          location: 'C-1-05',
-          status: 'out-of-stock',
-          lastUpdated: '2024-08-19',
-          supplier: 'SafetyFirst Inc.',
-          description: 'Heavy-duty safety helmet for industrial use'
-        },
-        {
-          id: 4,
-          name: 'Laptop Stand Adjustable',
-          sku: 'LSA-004',
-          category: 'Electronics',
-          quantity: 32,
-          minQuantity: 10,
-          maxQuantity: 80,
-          price: 65.99,
-          location: 'A-3-02',
-          status: 'in-stock',
-          lastUpdated: '2024-08-21',
-          supplier: 'TechSupply Co.',
-          description: 'Adjustable aluminum laptop stand for better ergonomics'
-        },
-        {
-          id: 5,
-          name: 'Steel Storage Cabinet',
-          sku: 'SSC-005',
-          category: 'Furniture',
-          quantity: 12,
-          minQuantity: 5,
-          maxQuantity: 30,
-          price: 189.99,
-          location: 'B-1-01',
-          status: 'in-stock',
-          lastUpdated: '2024-08-20',
-          supplier: 'MetalWorks Ltd.',
-          description: 'Heavy-duty steel storage cabinet with multiple shelves'
-        },
-        {
-          id: 6,
-          name: 'Disposable Gloves Box',
-          sku: 'DGB-006',
-          category: 'Safety',
-          quantity: 150,
-          minQuantity: 50,
-          maxQuantity: 500,
-          price: 12.99,
-          location: 'C-2-01',
-          status: 'in-stock',
-          lastUpdated: '2024-08-21',
-          supplier: 'SafetyFirst Inc.',
-          description: 'Box of 100 disposable nitrile gloves'
-        }
-      ];
-      setInventory(mockInventory);
+      // Fetch goods from the database
+      const response = await goodsAPI.getGoods({
+        limit: 1000, // Get all goods for inventory view
+        search: searchTerm || undefined,
+        category: categoryFilter !== 'all' ? categoryFilter : undefined
+      });
+      
+      console.log('Inventory response:', response.data);
+      
+      if (response.data) {
+        // Transform the database data to match the component's expected format
+        const goods = Array.isArray(response.data.goods) ? response.data.goods : 
+                     Array.isArray(response.data) ? response.data : [];
+        
+        const transformedInventory = goods.map(item => {
+          // Determine status based on quantity
+          let status = 'in-stock';
+          const minQuantity = item.low_stock_threshold || 10;
+          
+          if (item.quantity === 0) {
+            status = 'out-of-stock';
+          } else if (item.quantity <= minQuantity) {
+            status = 'low-stock';
+          }
+
+          return {
+            id: item.id,
+            name: item.name || 'Unknown Item',
+            sku: item.sku || `SKU-${item.id}`,
+            category: item.category || 'General',
+            quantity: item.quantity || 0,
+            minQuantity: item.low_stock_threshold || 10,
+            maxQuantity: item.max_quantity || 100,
+            price: item.price_per_unit || 0,
+            location: item.location || `LOC-${item.id}`,
+            status: status,
+            lastUpdated: item.updated_at ? new Date(item.updated_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            supplier: item.supplier || 'Unknown Supplier',
+            description: item.description || 'No description available',
+            branch: item.branch?.name || 'Main Branch'
+          };
+        });
+        
+        setInventory(transformedInventory);
+      } else {
+        console.warn('No inventory data received');
+        setInventory([]);
+      }
     } catch (error) {
       console.error('Error fetching inventory:', error);
+      showNotification('Failed to load inventory', 'error');
+      
+      // Set empty inventory instead of fallback data
+      setInventory([]);
+      
+      // Handle authentication errors
+      if (error.response?.status === 401) {
+        showNotification('Please log in to view inventory', 'error');
+        navigate('/auth');
+      } else {
+        showNotification('Unable to load inventory at the moment', 'error');
+      }
     } finally {
       setLoading(false);
     }

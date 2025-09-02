@@ -28,8 +28,6 @@ const EmployeeDashboard = () => {
     completedTasks: 0,
     pendingTasks: 0,
     inventoryItems: 0,
-    todayHours: 0,
-    weekHours: 0,
     productivity: 0,
     taskCompletion: 0
   });
@@ -53,8 +51,6 @@ const EmployeeDashboard = () => {
         completedTasks: 12,
         pendingTasks: 3,
         inventoryItems: 247,
-        todayHours: 6.5,
-        weekHours: 32.5,
         productivity: 87,
         taskCompletion: 92
       });
@@ -133,20 +129,6 @@ const EmployeeDashboard = () => {
       icon: Package,
       color: 'from-green-500 to-green-600',
       action: () => navigate('/employee/inventory')
-    },
-    {
-      title: 'Time Tracker',
-      description: 'Log work hours and breaks',
-      icon: Clock,
-      color: 'from-purple-500 to-purple-600',
-      action: () => navigate('/employee/timetracker')
-    },
-    {
-      title: 'Reports',
-      description: 'View performance and analytics',
-      icon: TrendingUp,
-      color: 'from-orange-500 to-orange-600',
-      action: () => navigate('/employee/reports')
     }
   ];
 
@@ -196,18 +178,6 @@ const EmployeeDashboard = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Completed</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.completedTasks}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-3 bg-purple-100 rounded-xl">
-                <Clock className="h-6 w-6 text-purple-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Today Hours</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.todayHours}h</p>
               </div>
             </div>
           </div>

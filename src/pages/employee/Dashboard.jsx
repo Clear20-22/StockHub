@@ -4,9 +4,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { 
   ClipboardList, 
   Package, 
-  TrendingUp, 
   CheckCircle, 
-  Clock, 
+  Clock,
   AlertTriangle,
   AlertCircle,
   Award,
@@ -14,7 +13,6 @@ import {
   Target,
   Activity,
   MapPin,
-  User,
   ArrowUpRight,
   BarChart3,
   PieChart,
@@ -168,39 +166,25 @@ const EmployeeDashboard = () => {
 
   const quickActions = [
     {
-      title: 'View My Tasks',
-      description: 'Check assigned tasks and deadlines',
+      title: 'My Assignments',
+      description: 'View and manage your assigned tasks',
       icon: ClipboardList,
       color: 'from-blue-500 to-blue-600',
       action: () => navigate('/employee/assignments')
     },
     {
-      title: 'Inventory Management',
-      description: 'View and update inventory items',
-      icon: Package,
-      color: 'from-green-500 to-green-600',
-      action: () => navigate('/employee/inventory')
-    },
-    {
-      title: 'Customer Applications',
-      description: 'Review and manage storage applications',
+      title: 'Manage Applications',
+      description: 'Review and process customer applications',
       icon: Users,
       color: 'from-indigo-500 to-indigo-600',
       action: () => navigate('/employee/applications')
     },
     {
-      title: 'Time Tracker',
-      description: 'Log work hours and breaks',
-      icon: Clock,
-      color: 'from-purple-500 to-purple-600',
-      action: () => navigate('/employee/time-tracker')
-    },
-    {
-      title: 'Reports',
-      description: 'View performance and analytics',
-      icon: TrendingUp,
-      color: 'from-orange-500 to-orange-600',
-      action: () => navigate('/employee/reports')
+      title: 'Inventory Management',
+      description: 'Monitor and update inventory items',
+      icon: Package,
+      color: 'from-green-500 to-green-600',
+      action: () => navigate('/employee/inventory')
     }
   ];
 
@@ -264,7 +248,7 @@ const EmployeeDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {quickActions.map((action, index) => (
             <button
               key={index}
@@ -366,34 +350,6 @@ const EmployeeDashboard = () => {
                 ))}
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Additional Actions */}
-        <div className="mt-8 bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">Additional Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button 
-              onClick={() => navigate('/employee/time-tracker')}
-              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors duration-200 group"
-            >
-              <Clock className="w-8 h-8 text-gray-400 group-hover:text-blue-500 mx-auto mb-2" />
-              <p className="text-sm font-medium text-gray-600 group-hover:text-blue-600">Time Tracker</p>
-            </button>
-            <button 
-              onClick={() => navigate('/employee/reports')}
-              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition-colors duration-200 group"
-            >
-              <TrendingUp className="w-8 h-8 text-gray-400 group-hover:text-green-500 mx-auto mb-2" />
-              <p className="text-sm font-medium text-gray-600 group-hover:text-green-600">View Reports</p>
-            </button>
-            <button 
-              onClick={() => navigate('/employee/settings')}
-              className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-colors duration-200 group"
-            >
-              <User className="w-8 h-8 text-gray-400 group-hover:text-purple-500 mx-auto mb-2" />
-              <p className="text-sm font-medium text-gray-600 group-hover:text-purple-600">Settings</p>
-            </button>
           </div>
         </div>
       </div>
