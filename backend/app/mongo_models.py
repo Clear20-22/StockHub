@@ -70,7 +70,7 @@ class BranchCreate(BaseModel):
 
 class MongoGoods(BaseModel):
     """MongoDB Goods model"""
-    id: str = Field(alias="_id")
+    id: str
     name: str
     description: Optional[str] = None
     category: Optional[str] = None

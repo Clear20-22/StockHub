@@ -16,7 +16,7 @@ def get_goods_collection():
     db = get_database()
     return db.goods
 
-@router.post("/", response_model=MongoGoods, status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_goods(goods_data: GoodsCreate):
     """Create new goods"""
     collection = get_goods_collection()
@@ -32,8 +32,14 @@ async def create_goods(goods_data: GoodsCreate):
         created_goods = await collection.find_one({"_id": result.inserted_id})
         
         if created_goods:
-            created_goods["_id"] = str(created_goods["_id"])
-            return MongoGoods(**created_goods)
+            # Convert ObjectId to string for JSON serialization
+            created_goods["id"] = str(created_goods["_id"])
+            del created_goods["_id"]
+            # Convert any other ObjectId fields to strings
+            for key, value in created_goods.items():
+                if isinstance(value, ObjectId):
+                    created_goods[key] = str(value)
+            return created_goods
         else:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -77,7 +83,12 @@ async def get_all_goods(page: int = 1, limit: int = 10, search: str = None, cate
             # Convert _id to id and create response dict
             goods_dict = dict(document)
             goods_dict["id"] = str(goods_dict["_id"])
-            goods_dict["_id"] = str(goods_dict["_id"])
+            # Remove the ObjectId field completely and replace with string id
+            del goods_dict["_id"]
+            # Convert any other ObjectId fields to strings
+            for key, value in goods_dict.items():
+                if isinstance(value, ObjectId):
+                    goods_dict[key] = str(value)
             goods_list.append(goods_dict)
         
         return {
@@ -110,7 +121,12 @@ async def get_goods_by_id(goods_id: str):
         if goods:
             # Convert _id to id for frontend compatibility
             goods["id"] = str(goods["_id"])
-            goods["_id"] = str(goods["_id"])
+            # Remove the ObjectId field completely
+            del goods["_id"]
+            # Convert any other ObjectId fields to strings
+            for key, value in goods.items():
+                if isinstance(value, ObjectId):
+                    goods[key] = str(value)
             return goods
         else:
             raise HTTPException(
@@ -164,7 +180,11 @@ async def update_goods(goods_id: str, goods_update: GoodsUpdate):
             updated_goods = await collection.find_one({"_id": ObjectId(goods_id)})
             # Convert _id to id for frontend compatibility
             updated_goods["id"] = str(updated_goods["_id"])
-            updated_goods["_id"] = str(updated_goods["_id"])
+            del updated_goods["_id"]
+            # Convert any other ObjectId fields to strings
+            for key, value in updated_goods.items():
+                if isinstance(value, ObjectId):
+                    updated_goods[key] = str(value)
             return updated_goods
         else:
             raise HTTPException(
@@ -276,7 +296,11 @@ async def update_stock(goods_id: str, stock_update: StockUpdate):
             # Get updated goods
             updated_goods = await collection.find_one({"_id": ObjectId(goods_id)})
             updated_goods["id"] = str(updated_goods["_id"])
-            updated_goods["_id"] = str(updated_goods["_id"])
+            del updated_goods["_id"]
+            # Convert any other ObjectId fields to strings
+            for key, value in updated_goods.items():
+                if isinstance(value, ObjectId):
+                    updated_goods[key] = str(value)
             
             # Create response with stock update details
             response = {
@@ -307,7 +331,7 @@ async def update_stock(goods_id: str, stock_update: StockUpdate):
             detail=f"An error occurred while updating stock: {str(e)}"
         )
 
-@router.get("/category/{category}", response_model=List[MongoGoods])
+@router.get("/category/{category}")
 async def get_goods_by_category(category: str):
     """Get goods by category"""
     collection = get_goods_collection()
@@ -317,8 +341,13 @@ async def get_goods_by_category(category: str):
         goods = []
         
         async for document in cursor:
-            document["_id"] = str(document["_id"])
-            goods.append(MongoGoods(**document))
+            document["id"] = str(document["_id"])
+            del document["_id"]
+            # Convert any other ObjectId fields to strings
+            for key, value in document.items():
+                if isinstance(value, ObjectId):
+                    document[key] = str(value)
+            goods.append(document)
         
         return goods
     except Exception as e:

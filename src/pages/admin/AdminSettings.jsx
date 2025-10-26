@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
   ArrowLeft,
   User,
   Bell,
@@ -21,27 +21,42 @@ import {
   RefreshCw,
   Monitor,
   Globe,
-  FileText
-} from 'lucide-react';
+  FileText,
+} from "lucide-react";
+import { authAPI, usersAPI } from "../../services/api";
 
 const AdminSettings = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('system');
+  const [activeTab, setActiveTab] = useState("system");
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [error, setError] = useState("");
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // System Settings
+  // Admin Profile
+  const [adminProfile, setAdminProfile] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    role: "admin",
+    lastLogin: "",
+    createdAt: "",
+  });
+
+  // System Settings (these would be stored in a config table/collection)
   const [systemSettings, setSystemSettings] = useState({
-    siteName: 'StockHub',
-    siteDescription: 'Professional Warehouse Management System',
+    siteName: "StockHub",
+    siteDescription: "Professional Warehouse Management System",
     maintenanceMode: false,
     allowRegistrations: true,
-    defaultUserRole: 'customer',
-    sessionTimeout: '60',
-    maxFileSize: '10',
-    backupFrequency: 'daily',
+    defaultUserRole: "customer",
+    sessionTimeout: "60",
+    maxFileSize: "10",
+    backupFrequency: "daily",
     enableLogging: true,
-    logLevel: 'info'
+    logLevel: "info",
   });
 
   // Security Settings
@@ -50,90 +65,170 @@ const AdminSettings = () => {
     minPasswordLength: 8,
     requireTwoFactor: false,
     maxLoginAttempts: 5,
-    lockoutDuration: '30',
+    lockoutDuration: "30",
     enableApiRateLimit: true,
-    rateLimitRequests: '100',
-    rateLimitWindow: '1',
+    rateLimitRequests: "100",
+    rateLimitWindow: "1",
     enableIpWhitelist: false,
-    allowedIps: ''
+    allowedIps: "",
   });
 
   // Notification Settings
   const [notificationSettings, setNotificationSettings] = useState({
     emailEnabled: true,
-    smtpHost: 'smtp.stockhub.com',
-    smtpPort: '587',
-    smtpUsername: 'noreply@stockhub.com',
-    smtpPassword: '',
-    smtpEncryption: 'tls',
+    smtpHost: "smtp.stockhub.com",
+    smtpPort: "587",
+    smtpUsername: "noreply@stockhub.com",
+    smtpPassword: "",
+    smtpEncryption: "tls",
     smsEnabled: false,
-    smsProvider: 'twilio',
-    smsApiKey: '',
+    smsProvider: "twilio",
+    smsApiKey: "",
     pushEnabled: true,
     adminAlerts: true,
     systemAlerts: true,
-    userNotifications: true
+    userNotifications: true,
   });
 
   // Database Settings
   const [databaseSettings, setDatabaseSettings] = useState({
-    host: 'localhost',
-    port: '5432',
-    database: 'stockhub',
-    username: 'stockhub_user',
-    maxConnections: '20',
-    connectionTimeout: '30',
-    queryTimeout: '60',
+    host: "localhost",
+    port: "5432",
+    database: "stockhub",
+    username: "stockhub_user",
+    maxConnections: "20",
+    connectionTimeout: "30",
+    queryTimeout: "60",
     enableQueryLogging: false,
     autoBackup: true,
-    backupRetention: '30'
+    backupRetention: "30",
   });
 
   const tabs = [
-    { id: 'system', label: 'System Settings', icon: SettingsIcon },
-    { id: 'security', label: 'Security', icon: Shield },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'database', label: 'Database', icon: Database },
-    { id: 'profile', label: 'Admin Profile', icon: User }
+    { id: "system", label: "System Settings", icon: SettingsIcon },
+    { id: "security", label: "Security", icon: Shield },
+    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "database", label: "Database", icon: Database },
+    { id: "profile", label: "Admin Profile", icon: User },
   ];
 
+  // Fetch admin data on component mount
+  useEffect(() => {
+    fetchAdminData();
+  }, []);
+
+  // Auto-save functionality with debouncing for profile changes only
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (
+        !loadingData &&
+        !isInitialLoad &&
+        adminProfile.email &&
+        activeTab === "profile"
+      ) {
+        handleSave();
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [adminProfile, loadingData, isInitialLoad, activeTab]);
+
+  const fetchAdminData = async () => {
+    try {
+      setLoadingData(true);
+      const response = await authAPI.getCurrentUser();
+      const userData = response.data;
+
+      setAdminProfile({
+        firstName: userData.first_name || "",
+        lastName: userData.last_name || "",
+        email: userData.email || "",
+        phone: userData.phone || "",
+        role: userData.role || "admin",
+        lastLogin: userData.last_login || "",
+        createdAt: userData.created_at || "",
+      });
+
+      // In a real application, you would fetch system settings from a separate endpoint
+      // For now, we'll use the default values
+    } catch (error) {
+      console.error("Error fetching admin data:", error);
+      setError("Failed to load admin data");
+    } finally {
+      setLoadingData(false);
+      setIsInitialLoad(false);
+    }
+  };
+
   const handleSystemChange = (setting, value) => {
-    setSystemSettings(prev => ({
+    setSystemSettings((prev) => ({
       ...prev,
-      [setting]: value
+      [setting]: value,
     }));
   };
 
   const handleSecurityChange = (setting, value) => {
-    setSecuritySettings(prev => ({
+    setSecuritySettings((prev) => ({
       ...prev,
-      [setting]: value
+      [setting]: value,
     }));
   };
 
   const handleNotificationChange = (setting, value) => {
-    setNotificationSettings(prev => ({
+    setNotificationSettings((prev) => ({
       ...prev,
-      [setting]: value
+      [setting]: value,
     }));
   };
 
   const handleDatabaseChange = (setting, value) => {
-    setDatabaseSettings(prev => ({
+    setDatabaseSettings((prev) => ({
       ...prev,
-      [setting]: value
+      [setting]: value,
     }));
   };
 
+  const handleProfileChange = (field, value) => {
+    const newProfileData = {
+      ...adminProfile,
+      [field]: value,
+    };
+    setAdminProfile(newProfileData);
+
+    // Auto-save only if not initial load and for profile tab
+    if (!isInitialLoad && activeTab === "profile") {
+      clearTimeout(window.adminProfileSaveTimeout);
+      window.adminProfileSaveTimeout = setTimeout(() => {
+        handleSave();
+      }, 1000);
+    }
+  };
+
   const handleSave = async () => {
+    if (loadingData) return;
+
     setLoading(true);
+    setError("");
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Save admin profile data
+      if (activeTab === "profile") {
+        const updateData = {
+          first_name: adminProfile.firstName,
+          last_name: adminProfile.lastName,
+          phone: adminProfile.phone,
+        };
+        await usersAPI.updateMe(updateData);
+      }
+
+      // In a real application, you would save system settings to a dedicated endpoint
+      // For now, we'll just simulate the save
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
-      console.error('Error saving settings:', error);
+      console.error("Error saving settings:", error);
+      setError("Failed to save settings");
     } finally {
       setLoading(false);
     }
@@ -142,10 +237,10 @@ const AdminSettings = () => {
   const handleBackupNow = async () => {
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      alert('Backup completed successfully!');
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      alert("Backup completed successfully!");
     } catch (error) {
-      console.error('Error creating backup:', error);
+      console.error("Error creating backup:", error);
     } finally {
       setLoading(false);
     }
@@ -154,10 +249,10 @@ const AdminSettings = () => {
   const handleTestConnection = async () => {
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      alert('Database connection successful!');
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      alert("Database connection successful!");
     } catch (error) {
-      console.error('Error testing connection:', error);
+      console.error("Error testing connection:", error);
     } finally {
       setLoading(false);
     }
@@ -166,24 +261,32 @@ const AdminSettings = () => {
   const renderSystemTab = () => (
     <div className="space-y-6">
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">General Settings</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          General Settings
+        </h3>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Site Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Site Name
+            </label>
             <input
               type="text"
               value={systemSettings.siteName}
-              onChange={(e) => handleSystemChange('siteName', e.target.value)}
+              onChange={(e) => handleSystemChange("siteName", e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Default User Role</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Default User Role
+            </label>
             <select
               value={systemSettings.defaultUserRole}
-              onChange={(e) => handleSystemChange('defaultUserRole', e.target.value)}
+              onChange={(e) =>
+                handleSystemChange("defaultUserRole", e.target.value)
+              }
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="customer">Customer</option>
@@ -193,10 +296,14 @@ const AdminSettings = () => {
         </div>
 
         <div className="mt-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Site Description</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Site Description
+          </label>
           <textarea
             value={systemSettings.siteDescription}
-            onChange={(e) => handleSystemChange('siteDescription', e.target.value)}
+            onChange={(e) =>
+              handleSystemChange("siteDescription", e.target.value)
+            }
             rows={3}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
           />
@@ -204,21 +311,29 @@ const AdminSettings = () => {
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Session Timeout (minutes)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Session Timeout (minutes)
+            </label>
             <input
               type="number"
               value={systemSettings.sessionTimeout}
-              onChange={(e) => handleSystemChange('sessionTimeout', e.target.value)}
+              onChange={(e) =>
+                handleSystemChange("sessionTimeout", e.target.value)
+              }
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Max File Size (MB)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Max File Size (MB)
+            </label>
             <input
               type="number"
               value={systemSettings.maxFileSize}
-              onChange={(e) => handleSystemChange('maxFileSize', e.target.value)}
+              onChange={(e) =>
+                handleSystemChange("maxFileSize", e.target.value)
+              }
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -226,9 +341,21 @@ const AdminSettings = () => {
 
         <div className="mt-6 space-y-4">
           {[
-            { key: 'maintenanceMode', label: 'Maintenance Mode', description: 'Temporarily disable site access for maintenance' },
-            { key: 'allowRegistrations', label: 'Allow User Registrations', description: 'Allow new users to register accounts' },
-            { key: 'enableLogging', label: 'Enable System Logging', description: 'Log system events and errors' }
+            {
+              key: "maintenanceMode",
+              label: "Maintenance Mode",
+              description: "Temporarily disable site access for maintenance",
+            },
+            {
+              key: "allowRegistrations",
+              label: "Allow User Registrations",
+              description: "Allow new users to register accounts",
+            },
+            {
+              key: "enableLogging",
+              label: "Enable System Logging",
+              description: "Log system events and errors",
+            },
           ].map(({ key, label, description }) => (
             <div key={key} className="flex items-center justify-between">
               <div>
@@ -250,13 +377,19 @@ const AdminSettings = () => {
       </div>
 
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">System Maintenance</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          System Maintenance
+        </h3>
+
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-medium text-gray-900">Create System Backup</h4>
-              <p className="text-sm text-gray-500">Generate a complete system backup</p>
+              <h4 className="font-medium text-gray-900">
+                Create System Backup
+              </h4>
+              <p className="text-sm text-gray-500">
+                Generate a complete system backup
+              </p>
             </div>
             <button
               onClick={handleBackupNow}
@@ -275,7 +408,9 @@ const AdminSettings = () => {
           <div className="flex items-center justify-between">
             <div>
               <h4 className="font-medium text-gray-900">Clear System Cache</h4>
-              <p className="text-sm text-gray-500">Clear all cached data to improve performance</p>
+              <p className="text-sm text-gray-500">
+                Clear all cached data to improve performance
+              </p>
             </div>
             <button className="flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -286,7 +421,9 @@ const AdminSettings = () => {
           <div className="flex items-center justify-between">
             <div>
               <h4 className="font-medium text-red-600">Reset System</h4>
-              <p className="text-sm text-gray-500">Reset system to default settings (cannot be undone)</p>
+              <p className="text-sm text-gray-500">
+                Reset system to default settings (cannot be undone)
+              </p>
             </div>
             <button className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
               <Trash2 className="h-4 w-4 mr-2" />
@@ -301,19 +438,30 @@ const AdminSettings = () => {
   const renderSecurityTab = () => (
     <div className="space-y-6">
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Password Policy</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Password Policy
+        </h3>
+
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-medium text-gray-900">Enforce Password Policy</h4>
-              <p className="text-sm text-gray-500">Require strong passwords for all users</p>
+              <h4 className="font-medium text-gray-900">
+                Enforce Password Policy
+              </h4>
+              <p className="text-sm text-gray-500">
+                Require strong passwords for all users
+              </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
                 checked={securitySettings.enforcePasswordPolicy}
-                onChange={(e) => handleSecurityChange('enforcePasswordPolicy', e.target.checked)}
+                onChange={(e) =>
+                  handleSecurityChange(
+                    "enforcePasswordPolicy",
+                    e.target.checked
+                  )
+                }
                 className="sr-only peer"
               />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -322,25 +470,33 @@ const AdminSettings = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Password Length</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Minimum Password Length
+              </label>
               <input
                 type="number"
                 min="6"
                 max="32"
                 value={securitySettings.minPasswordLength}
-                onChange={(e) => handleSecurityChange('minPasswordLength', e.target.value)}
+                onChange={(e) =>
+                  handleSecurityChange("minPasswordLength", e.target.value)
+                }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Max Login Attempts</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Max Login Attempts
+              </label>
               <input
                 type="number"
                 min="3"
                 max="10"
                 value={securitySettings.maxLoginAttempts}
-                onChange={(e) => handleSecurityChange('maxLoginAttempts', e.target.value)}
+                onChange={(e) =>
+                  handleSecurityChange("maxLoginAttempts", e.target.value)
+                }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -349,19 +505,27 @@ const AdminSettings = () => {
       </div>
 
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">API Security</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          API Security
+        </h3>
+
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-medium text-gray-900">Enable Rate Limiting</h4>
-              <p className="text-sm text-gray-500">Limit API requests per IP address</p>
+              <h4 className="font-medium text-gray-900">
+                Enable Rate Limiting
+              </h4>
+              <p className="text-sm text-gray-500">
+                Limit API requests per IP address
+              </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
                 checked={securitySettings.enableApiRateLimit}
-                onChange={(e) => handleSecurityChange('enableApiRateLimit', e.target.checked)}
+                onChange={(e) =>
+                  handleSecurityChange("enableApiRateLimit", e.target.checked)
+                }
                 className="sr-only peer"
               />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -370,21 +534,29 @@ const AdminSettings = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Rate Limit (requests)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Rate Limit (requests)
+              </label>
               <input
                 type="number"
                 value={securitySettings.rateLimitRequests}
-                onChange={(e) => handleSecurityChange('rateLimitRequests', e.target.value)}
+                onChange={(e) =>
+                  handleSecurityChange("rateLimitRequests", e.target.value)
+                }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Time Window (minutes)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Time Window (minutes)
+              </label>
               <input
                 type="number"
                 value={securitySettings.rateLimitWindow}
-                onChange={(e) => handleSecurityChange('rateLimitWindow', e.target.value)}
+                onChange={(e) =>
+                  handleSecurityChange("rateLimitWindow", e.target.value)
+                }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -397,19 +569,27 @@ const AdminSettings = () => {
   const renderNotificationsTab = () => (
     <div className="space-y-6">
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Email Configuration</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Email Configuration
+        </h3>
+
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-medium text-gray-900">Enable Email Notifications</h4>
-              <p className="text-sm text-gray-500">Send email notifications to users</p>
+              <h4 className="font-medium text-gray-900">
+                Enable Email Notifications
+              </h4>
+              <p className="text-sm text-gray-500">
+                Send email notifications to users
+              </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
                 checked={notificationSettings.emailEnabled}
-                onChange={(e) => handleNotificationChange('emailEnabled', e.target.checked)}
+                onChange={(e) =>
+                  handleNotificationChange("emailEnabled", e.target.checked)
+                }
                 className="sr-only peer"
               />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -418,40 +598,56 @@ const AdminSettings = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">SMTP Host</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                SMTP Host
+              </label>
               <input
                 type="text"
                 value={notificationSettings.smtpHost}
-                onChange={(e) => handleNotificationChange('smtpHost', e.target.value)}
+                onChange={(e) =>
+                  handleNotificationChange("smtpHost", e.target.value)
+                }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">SMTP Port</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                SMTP Port
+              </label>
               <input
                 type="number"
                 value={notificationSettings.smtpPort}
-                onChange={(e) => handleNotificationChange('smtpPort', e.target.value)}
+                onChange={(e) =>
+                  handleNotificationChange("smtpPort", e.target.value)
+                }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">SMTP Username</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                SMTP Username
+              </label>
               <input
                 type="email"
                 value={notificationSettings.smtpUsername}
-                onChange={(e) => handleNotificationChange('smtpUsername', e.target.value)}
+                onChange={(e) =>
+                  handleNotificationChange("smtpUsername", e.target.value)
+                }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">SMTP Encryption</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                SMTP Encryption
+              </label>
               <select
                 value={notificationSettings.smtpEncryption}
-                onChange={(e) => handleNotificationChange('smtpEncryption', e.target.value)}
+                onChange={(e) =>
+                  handleNotificationChange("smtpEncryption", e.target.value)
+                }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="none">None</option>
@@ -462,11 +658,15 @@ const AdminSettings = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">SMTP Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              SMTP Password
+            </label>
             <input
               type="password"
               value={notificationSettings.smtpPassword}
-              onChange={(e) => handleNotificationChange('smtpPassword', e.target.value)}
+              onChange={(e) =>
+                handleNotificationChange("smtpPassword", e.target.value)
+              }
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter SMTP password"
             />
@@ -475,13 +675,27 @@ const AdminSettings = () => {
       </div>
 
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Notification Types</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Notification Types
+        </h3>
+
         <div className="space-y-4">
           {[
-            { key: 'adminAlerts', label: 'Admin Alerts', description: 'Important system alerts for administrators' },
-            { key: 'systemAlerts', label: 'System Alerts', description: 'System health and performance notifications' },
-            { key: 'userNotifications', label: 'User Notifications', description: 'User activity and account notifications' }
+            {
+              key: "adminAlerts",
+              label: "Admin Alerts",
+              description: "Important system alerts for administrators",
+            },
+            {
+              key: "systemAlerts",
+              label: "System Alerts",
+              description: "System health and performance notifications",
+            },
+            {
+              key: "userNotifications",
+              label: "User Notifications",
+              description: "User activity and account notifications",
+            },
           ].map(({ key, label, description }) => (
             <div key={key} className="flex items-center justify-between">
               <div>
@@ -492,7 +706,9 @@ const AdminSettings = () => {
                 <input
                   type="checkbox"
                   checked={notificationSettings[key]}
-                  onChange={(e) => handleNotificationChange(key, e.target.checked)}
+                  onChange={(e) =>
+                    handleNotificationChange(key, e.target.checked)
+                  }
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -507,45 +723,55 @@ const AdminSettings = () => {
   const renderDatabaseTab = () => (
     <div className="space-y-6">
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Database Connection</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Database Connection
+        </h3>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Host</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Host
+            </label>
             <input
               type="text"
               value={databaseSettings.host}
-              onChange={(e) => handleDatabaseChange('host', e.target.value)}
+              onChange={(e) => handleDatabaseChange("host", e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Port</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Port
+            </label>
             <input
               type="number"
               value={databaseSettings.port}
-              onChange={(e) => handleDatabaseChange('port', e.target.value)}
+              onChange={(e) => handleDatabaseChange("port", e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Database Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Database Name
+            </label>
             <input
               type="text"
               value={databaseSettings.database}
-              onChange={(e) => handleDatabaseChange('database', e.target.value)}
+              onChange={(e) => handleDatabaseChange("database", e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Username
+            </label>
             <input
               type="text"
               value={databaseSettings.username}
-              onChange={(e) => handleDatabaseChange('username', e.target.value)}
+              onChange={(e) => handleDatabaseChange("username", e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -568,35 +794,49 @@ const AdminSettings = () => {
       </div>
 
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Settings</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Performance Settings
+        </h3>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Max Connections</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Max Connections
+            </label>
             <input
               type="number"
               value={databaseSettings.maxConnections}
-              onChange={(e) => handleDatabaseChange('maxConnections', e.target.value)}
+              onChange={(e) =>
+                handleDatabaseChange("maxConnections", e.target.value)
+              }
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Connection Timeout (s)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Connection Timeout (s)
+            </label>
             <input
               type="number"
               value={databaseSettings.connectionTimeout}
-              onChange={(e) => handleDatabaseChange('connectionTimeout', e.target.value)}
+              onChange={(e) =>
+                handleDatabaseChange("connectionTimeout", e.target.value)
+              }
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Query Timeout (s)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Query Timeout (s)
+            </label>
             <input
               type="number"
               value={databaseSettings.queryTimeout}
-              onChange={(e) => handleDatabaseChange('queryTimeout', e.target.value)}
+              onChange={(e) =>
+                handleDatabaseChange("queryTimeout", e.target.value)
+              }
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -604,8 +844,16 @@ const AdminSettings = () => {
 
         <div className="mt-6 space-y-4">
           {[
-            { key: 'enableQueryLogging', label: 'Enable Query Logging', description: 'Log all database queries for debugging' },
-            { key: 'autoBackup', label: 'Automatic Backups', description: 'Automatically backup database daily' }
+            {
+              key: "enableQueryLogging",
+              label: "Enable Query Logging",
+              description: "Log all database queries for debugging",
+            },
+            {
+              key: "autoBackup",
+              label: "Automatic Backups",
+              description: "Automatically backup database daily",
+            },
           ].map(({ key, label, description }) => (
             <div key={key} className="flex items-center justify-between">
               <div>
@@ -631,8 +879,10 @@ const AdminSettings = () => {
   const renderProfileTab = () => (
     <div className="space-y-6">
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Administrator Profile</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Administrator Profile
+        </h3>
+
         <div className="flex items-center space-x-6 mb-6">
           <div className="relative">
             <img
@@ -655,49 +905,90 @@ const AdminSettings = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              First Name
+            </label>
             <input
               type="text"
-              defaultValue="Admin"
+              value={adminProfile.firstName}
+              onChange={(e) => handleProfileChange("firstName", e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Last Name
+            </label>
             <input
               type="text"
-              defaultValue="User"
+              value={adminProfile.lastName}
+              onChange={(e) => handleProfileChange("lastName", e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Email Address
+            </label>
             <input
               type="email"
-              defaultValue="admin@stockhub.com"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={adminProfile.email}
+              disabled
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Phone Number
+            </label>
             <input
               type="tel"
-              defaultValue="+1 (555) 000-0000"
+              value={adminProfile.phone}
+              onChange={(e) => handleProfileChange("phone", e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="+1 (555) 000-0000"
             />
+          </div>
+        </div>
+
+        {/* Admin Info Display */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Role
+              </label>
+              <p className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                {adminProfile.role}
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Last Login
+              </label>
+              <p className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                {adminProfile.lastLogin
+                  ? new Date(adminProfile.lastLogin).toLocaleDateString()
+                  : "N/A"}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Change Password</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Change Password
+        </h3>
+
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Current Password
+            </label>
             <input
               type="password"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -706,7 +997,9 @@ const AdminSettings = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              New Password
+            </label>
             <input
               type="password"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -715,7 +1008,9 @@ const AdminSettings = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Confirm New Password
+            </label>
             <input
               type="password"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -739,16 +1034,20 @@ const AdminSettings = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <button 
-                onClick={() => navigate('/admin/dashboard')}
+              <button
+                onClick={() => navigate("/admin/dashboard")}
                 className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Dashboard
               </button>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Admin Settings</h1>
-                <p className="text-gray-600 mt-1">Manage system configuration and security settings</p>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Admin Settings
+                </h1>
+                <p className="text-gray-600 mt-1">
+                  Manage system configuration and security settings
+                </p>
               </div>
             </div>
           </div>
@@ -761,7 +1060,35 @@ const AdminSettings = () => {
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-center">
               <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-              <p className="text-green-800 font-medium">Settings saved successfully!</p>
+              <p className="text-green-800 font-medium">
+                Settings saved successfully!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+              <p className="text-red-800 font-medium">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loadingData && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-2"></div>
+              <p className="text-blue-800 font-medium">
+                Loading admin settings...
+              </p>
             </div>
           </div>
         </div>
@@ -780,13 +1107,15 @@ const AdminSettings = () => {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors duration-200 ${
                       activeTab === tab.id
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? "bg-blue-50 text-blue-700 border border-blue-200"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                     }`}
                   >
-                    <tab.icon className={`h-5 w-5 mr-3 ${
-                      activeTab === tab.id ? 'text-blue-600' : 'text-gray-400'
-                    }`} />
+                    <tab.icon
+                      className={`h-5 w-5 mr-3 ${
+                        activeTab === tab.id ? "text-blue-600" : "text-gray-400"
+                      }`}
+                    />
                     <span className="font-medium">{tab.label}</span>
                   </button>
                 ))}
@@ -796,11 +1125,11 @@ const AdminSettings = () => {
 
           {/* Content */}
           <div className="flex-1">
-            {activeTab === 'system' && renderSystemTab()}
-            {activeTab === 'security' && renderSecurityTab()}
-            {activeTab === 'notifications' && renderNotificationsTab()}
-            {activeTab === 'database' && renderDatabaseTab()}
-            {activeTab === 'profile' && renderProfileTab()}
+            {activeTab === "system" && renderSystemTab()}
+            {activeTab === "security" && renderSecurityTab()}
+            {activeTab === "notifications" && renderNotificationsTab()}
+            {activeTab === "database" && renderDatabaseTab()}
+            {activeTab === "profile" && renderProfileTab()}
 
             {/* Save Button */}
             <div className="mt-8 flex justify-end">
