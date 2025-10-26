@@ -29,6 +29,15 @@ class User(Base):
     last_login = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
+    # Additional employee fields
+    emergency_contact = Column(String, nullable=True)
+    position = Column(String, nullable=True)
+    department = Column(String, nullable=True)
+    employee_id = Column(String, nullable=True)
+    start_date = Column(String, nullable=True)
+    preferences = Column(Text, nullable=True)  # JSON string
+    notification_settings = Column(Text, nullable=True)  # JSON string
+    
     # Relationships
     goods = relationship("Goods", back_populates="owner")
     assignments = relationship("Assignment", back_populates="employee")
