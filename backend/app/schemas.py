@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional, List
+from pydantic import BaseModel, EmailStr, validator
+from typing import Optional, List, Union
 from datetime import datetime
+import json
 
 # User Schemas
 class UserBase(BaseModel):
@@ -24,6 +25,13 @@ class UserUpdate(BaseModel):
     role: Optional[str] = None
     is_active: Optional[bool] = None
     branch_id: Optional[int] = None
+    emergency_contact: Optional[str] = None
+    position: Optional[str] = None
+    department: Optional[str] = None
+    employee_id: Optional[str] = None
+    start_date: Optional[str] = None
+    preferences: Optional[dict] = None
+    notification_settings: Optional[dict] = None
 
 class User(UserBase):
     id: int
@@ -31,6 +39,31 @@ class User(UserBase):
     is_active: bool
     last_login: Optional[datetime] = None
     created_at: datetime
+    emergency_contact: Optional[str] = None
+    position: Optional[str] = None
+    department: Optional[str] = None
+    employee_id: Optional[str] = None
+    start_date: Optional[str] = None
+    preferences: Optional[Union[dict, str]] = None
+    notification_settings: Optional[Union[dict, str]] = None
+    
+    @validator('preferences', pre=True)
+    def parse_preferences(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return None
+        return v
+    
+    @validator('notification_settings', pre=True)
+    def parse_notification_settings(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return None
+        return v
     
     class Config:
         from_attributes = True

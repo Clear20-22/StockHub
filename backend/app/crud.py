@@ -38,11 +38,16 @@ def create_user(db: Session, user: UserCreate):
     return db_user
 
 def update_user(db: Session, user_id: int, user_update: UserUpdate):
+    import json
     db_user = db.query(User).filter(User.id == user_id).first()
     if db_user:
         update_data = user_update.dict(exclude_unset=True)
         for field, value in update_data.items():
-            setattr(db_user, field, value)
+            # Handle JSON serialization for preferences and notification_settings
+            if field in ['preferences', 'notification_settings'] and value is not None:
+                setattr(db_user, field, json.dumps(value))
+            else:
+                setattr(db_user, field, value)
         db.commit()
         db.refresh(db_user)
     return db_user

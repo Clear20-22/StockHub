@@ -96,20 +96,20 @@ const EmployeeSettings = () => {
   // Auto-save functionality with debouncing for profile changes
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!loadingData && !isInitialLoad && profile.email) {
+      if (!loadingData && !isInitialLoad && !error && profile.email) {
         handleSave();
       }
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [profile, loadingData, isInitialLoad]);
+  }, [profile, loadingData, isInitialLoad, error]);
 
   // Immediate save for notifications and preferences
   useEffect(() => {
-    if (!loadingData && !isInitialLoad) {
+    if (!loadingData && !isInitialLoad && !error) {
       handleSave();
     }
-  }, [notifications, preferences, loadingData, isInitialLoad]);
+  }, [notifications, preferences, loadingData, isInitialLoad, error]);
 
   const fetchUserData = async () => {
     try {
@@ -166,24 +166,49 @@ const EmployeeSettings = () => {
     setLoading(true);
     setError("");
     try {
+      // Only send fields that are supported by the backend
       const updateData = {
         first_name: profile.firstName,
         last_name: profile.lastName,
         phone: profile.phone,
         address: profile.address,
-        emergency_contact: profile.emergencyContact,
-        position: profile.position,
-        department: profile.department,
-        employee_id: profile.employeeId,
-        start_date: profile.startDate,
       };
+
+      // Only add optional fields if they have values
+      if (profile.emergencyContact)
+        updateData.emergency_contact = profile.emergencyContact;
+      if (profile.position) updateData.position = profile.position;
+      if (profile.department) updateData.department = profile.department;
+      if (profile.employeeId) updateData.employee_id = profile.employeeId;
+      if (profile.startDate) updateData.start_date = profile.startDate;
 
       await usersAPI.updateMe(updateData);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error("Error updating profile:", error);
-      setError("Failed to update profile");
+      // More specific error handling
+      if (error.response?.status === 422) {
+        setError(
+          "Some fields are not supported yet. Basic profile information has been saved."
+        );
+        // Try saving just the basic fields
+        try {
+          const basicData = {
+            first_name: profile.firstName,
+            last_name: profile.lastName,
+            phone: profile.phone,
+            address: profile.address,
+          };
+          await usersAPI.updateMe(basicData);
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 3000);
+        } catch (basicError) {
+          setError("Failed to update profile");
+        }
+      } else {
+        setError("Failed to update profile");
+      }
     } finally {
       setLoading(false);
     }
@@ -195,26 +220,53 @@ const EmployeeSettings = () => {
     setLoading(true);
     setError("");
     try {
+      // Only send fields that are supported by the backend
       const updateData = {
         first_name: profile.firstName,
         last_name: profile.lastName,
         phone: profile.phone,
         address: profile.address,
-        emergency_contact: profile.emergencyContact,
-        position: profile.position,
-        department: profile.department,
-        employee_id: profile.employeeId,
-        start_date: profile.startDate,
-        preferences: preferences,
-        notification_settings: notifications,
       };
+
+      // Only add optional fields if they have values
+      if (profile.emergencyContact)
+        updateData.emergency_contact = profile.emergencyContact;
+      if (profile.position) updateData.position = profile.position;
+      if (profile.department) updateData.department = profile.department;
+      if (profile.employeeId) updateData.employee_id = profile.employeeId;
+      if (profile.startDate) updateData.start_date = profile.startDate;
+
+      // Add preferences and notification settings
+      if (preferences) updateData.preferences = preferences;
+      if (notifications) updateData.notification_settings = notifications;
 
       await usersAPI.updateMe(updateData);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error("Error saving settings:", error);
-      setError("Failed to save settings");
+      // More specific error handling
+      if (error.response?.status === 422) {
+        setError(
+          "Some fields are not supported yet. Basic profile information has been saved."
+        );
+        // Try saving just the basic fields
+        try {
+          const basicData = {
+            first_name: profile.firstName,
+            last_name: profile.lastName,
+            phone: profile.phone,
+            address: profile.address,
+          };
+          await usersAPI.updateMe(basicData);
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 3000);
+        } catch (basicError) {
+          setError("Failed to save settings");
+        }
+      } else {
+        setError("Failed to save settings");
+      }
     } finally {
       setLoading(false);
     }
@@ -967,9 +1019,20 @@ const EmployeeSettings = () => {
       {error && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center">
-              <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
-              <p className="text-red-800 font-medium">{error}</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+                <p className="text-red-800 font-medium">{error}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setError("");
+                  handleSave();
+                }}
+                className="ml-4 px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+              >
+                Retry
+              </button>
             </div>
           </div>
         </div>
