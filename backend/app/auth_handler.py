@@ -2,13 +2,15 @@ from jose import jwt
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
 from fastapi import HTTPException, status
-import os
+from app.config import get_settings
 
-SECRET_KEY = os.getenv("SECRET_KEY", "a9f8e7d6c5b4a3210987654321abcdef1234567890abcdef0987654321fedcba09876543210fedcba")
-REFRESH_SECRET_KEY = os.getenv("REFRESH_SECRET_KEY", "b8e7d6c5b4a3210987654321abcdef1234567890abcdef0987654321fedcba09876543210fedcbb")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-REFRESH_TOKEN_EXPIRE_DAYS = 7
+settings = get_settings()
+
+SECRET_KEY = settings.SECRET_KEY
+REFRESH_SECRET_KEY = settings.REFRESH_SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
