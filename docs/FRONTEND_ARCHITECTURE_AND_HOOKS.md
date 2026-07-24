@@ -1,110 +1,146 @@
 # 🎨 Frontend Architecture & Hooks Guide — StockHub
 
-This document explains the frontend component hierarchy, React Context providers, custom hooks, and route protection mechanisms in **StockHub**.
+This document explains the frontend component architecture, state management models, React custom hooks, route guards, and API network integration patterns in **StockHub**.
 
 ---
 
 ## 📋 Table of Contents
-1. [Frontend Overview](#frontend-overview)
+1. [Frontend Overview & Component Topology](#frontend-overview--component-topology)
 2. [State Management & Context Providers](#state-management--context-providers)
-3. [Custom Data Hooks](#custom-data-hooks)
-4. [Route Guard Protection](#route-guard-protection)
-5. [API Service Layer](#api-service-layer)
+3. [Custom Data Hooks & State Machines](#custom-data-hooks--state-machines)
+4. [Route Security & UI Access Control](#route-security--ui-access-control)
+5. [API Service Facade & HTTP Interceptors](#api-service-facade--http-interceptors)
+6. [UI Performance & Error Handling Best Practices](#ui-performance--error-handling-best-practices)
 
 ---
 
-## Frontend Overview
+## Frontend Overview & Component Topology
 
-StockHub's frontend is a Single Page Application (SPA) built with **React 18**, **Vite**, **React Router v7**, and **Tailwind CSS**.
+StockHub's user interface is a responsive Single Page Application (SPA) built using **React 18**, **Vite**, **React Router v7**, **Tailwind CSS**, and **Framer Motion**.
 
+```mermaid
+graph TD
+    App[App.jsx Main Router] --> AuthProv[AuthProvider Context]
+    AuthProv --> NotifProv[NotificationProvider Context]
+    NotifProv --> Layout[Layout Navbar & Footer]
+    
+    Layout --> Public[Home Landing / Login / Register]
+    Layout --> Customer[Customer Dashboard / ApplyToStore / Inventory]
+    Layout --> Employee[Employee Workspace / Applications / Audit]
+    Layout --> Admin[Admin Control Center / ManageUsers / ManageGoods]
+
+    Customer --> Guard1[ProtectedRoute customer]
+    Employee --> Guard2[ProtectedRoute employee]
+    Admin --> Guard3[ProtectedRoute admin]
+```
+
+### Component Structure
 ```text
 src/
-├── App.jsx                     # Top-level Router & Smooth Scroll Manager
+├── App.jsx                     # Top-Level Router Container
 ├── main.jsx                    # Application Entry Point
-├── contexts/                   # React Context Providers
-│   ├── AuthContext.jsx         # User Authentication & JWT Storage
-│   └── NotificationContext.jsx # Toast Alert Notification System
-├── hooks/                      # Reusable Custom Data Hooks
-│   ├── useGoods.js             # Inventory fetching & refresh hook
-│   ├── useBranches.js          # Branch capacity & listing hook
-│   └── useSmoothScroll.js      # Smooth scroll behavior hook
+├── contexts/                   # Global React Contexts
+│   ├── AuthContext.jsx         # Authentication & JWT Storage State
+│   └── NotificationContext.jsx # Toast Banner Notification System
+├── hooks/                      # Custom Data & Behavior Hooks
+│   ├── useGoods.js             # Inventory Fetching & Refresh Hook
+│   ├── useBranches.js          # Branch Listing & Capacity Hook
+│   └── useSmoothScroll.js      # Smooth Scroll Behavioral Hook
 ├── components/
-│   ├── admin/
-│   │   ├── AdminProtectedComponent.jsx
-│   │   └── modals/             # GoodsModal, UserModal, StockUpdateModal, etc.
-│   ├── common/                 # ScrollToTop, alert banners
+│   ├── admin/                  # Admin Components & Modals
+│   ├── common/                 # Shared UI Components & Toast Banners
 │   ├── customer/               # Customer Dashboard Widgets
-│   └── layout/                 # Navbar, Footer
-└── pages/                      # Role-Specific View Containers
-    ├── Home.jsx                # Public Landing Page
-    ├── auth/                   # Login & Register
-    ├── customer/               # StoreGoods, BranchCapacity, ApplyToStore
-    ├── employee/               # CustomerApplications, Inventory, TimeTracker
-    └── admin/                  # ManageUsers, ManageGoods, ManageBranches
+│   └── layout/                 # Main Navbar & Footer Components
+└── services/                   # Axios API Network Facade
+    └── api.js                  # Request/Response Interceptors
 ```
 
 ---
 
 ## State Management & Context Providers
 
-### AuthContext (`src/contexts/AuthContext.jsx`)
-* **Purpose**: Manages global user authentication identity, JWT token storage (`localStorage`), login, registration, and logout operations.
-* **Usage**:
+### 1. `AuthContext` (`src/contexts/AuthContext.jsx`)
+* **Role**: Manages persistent user authentication identity, JWT access/refresh token storage (`localStorage`), login authentication, and logout cleanup.
+* **Usage Example**:
 ```javascript
 import { useAuth } from '../contexts/AuthContext';
 
-const Component = () => {
-  const { user, login, logout } = useAuth();
-  return <div>Welcome, {user?.username}</div>;
+const DashboardHeader = () => {
+  const { user, logout } = useAuth();
+  return (
+    <header className="flex justify-between items-center p-4">
+      <h2>Welcome, {user?.username} ({user?.role})</h2>
+      <button onClick={logout} className="btn-danger">Logout</button>
+    </header>
+  );
 };
 ```
 
-### NotificationContext (`src/contexts/NotificationContext.jsx`)
-* **Purpose**: Manages global toast notifications (`success`, `error`, `info`, `warning`) across all pages.
+### 2. `NotificationContext` (`src/contexts/NotificationContext.jsx`)
+* **Role**: Provides a centralized toast notification dispatcher (`showSuccess`, `showError`, `showWarning`, `showInfo`) rendering animated notifications globally.
 
 ---
 
-## Custom Data Hooks
+## Custom Data Hooks & State Machines
 
-Custom hooks in [`src/hooks/`](file:///Users/jubayerahmedsojib/Documents/GitHub/StockHub/src/hooks/) encapsulate asynchronous data fetching, loading states, and error handling.
+StockHub uses Custom React Hooks to extract asynchronous network state management out of view components.
 
-### `useGoods(filters)`
-```javascript
-import { useGoods } from '../hooks/useGoods';
-
-const InventoryView = () => {
-  const { goods, loading, error, refresh } = useGoods();
-
-  if (loading) return <div>Loading goods...</div>;
-  if (error) return <div>Error: {error}</div>;
-
-  return <div>{goods.map(g => <p key={g.id}>{g.name}</p>)}</div>;
-};
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Loading: fetchGoods() Triggered
+    Loading --> Success: API Response 200 OK
+    Loading --> Error: Network Error / API Exception
+    Success --> Loading: refresh() Called
+    Error --> Loading: Retry Action
 ```
 
-### `useBranches()`
+### Hook Specification: `useGoods(filters)`
 ```javascript
-import { useBranches } from '../hooks/useBranches';
+import { useState, useEffect, useCallback } from 'react';
+import { goodsAPI } from '../services/api';
 
-const BranchView = () => {
-  const { branches, loading, error, refresh } = useBranches();
-  // Renders branch capacity metrics
+export const useGoods = (filters = {}) => {
+  const [goods, setGoods] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchGoods = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await goodsAPI.getAll(filters);
+      setGoods(response.data || []);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to retrieve inventory.');
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  useEffect(() => {
+    fetchGoods();
+  }, [fetchGoods]);
+
+  return { goods, loading, error, refresh: fetchGoods };
 };
 ```
 
 ---
 
-## Route Guard Protection
+## Route Security & UI Access Control
 
 * **Component**: [`src/components/ProtectedRoute.jsx`](file:///Users/jubayerahmedsojib/Documents/GitHub/StockHub/src/components/ProtectedRoute.jsx)
-* **Behavior**: Evaluates authentication status and user roles before rendering protected routes.
+* **Logic**: Intercepts navigation actions, verifying that:
+  1. The user is logged in (`isAuthenticated`).
+  2. The user's role matches `allowedRoles`.
+  If unauthorized, the user is redirected to `/login` with location memory.
 
 ```jsx
 <Route 
-  path="/admin/manage-goods" 
+  path="/admin/manage-users" 
   element={
     <ProtectedRoute allowedRoles={['admin']}>
-      <ManageGoods />
+      <ManageUsers />
     </ProtectedRoute>
   } 
 />
@@ -112,9 +148,20 @@ const BranchView = () => {
 
 ---
 
-## API Service Layer
+## API Service Facade & HTTP Interceptors
 
 * **File**: [`src/services/api.js`](file:///Users/jubayerahmedsojib/Documents/GitHub/StockHub/src/services/api.js)
-* **Axios Interceptors**:
-  * **Request Interceptor**: Automatically attaches `Authorization: Bearer <token>` header to outgoing HTTP requests.
-  * **Response Interceptor**: Automatically handles `401 Unauthorized` responses by clearing local tokens and redirecting users to `/login`.
+* **Axios Configuration**:
+  * **Base URL Integration**: Dynamically reads `import.meta.env.VITE_API_BASE_URL` or defaults to `http://localhost:8000`.
+  * **Request Interceptor**: Automatically attaches `Authorization: Bearer <access_token>` to every request header.
+  * **Response Interceptor**: Automatically captures `401 Unauthorized` responses, clears local storage tokens, and redirects the client browser to `/login`.
+
+---
+
+## UI Performance & Error Handling Best Practices
+
+1. **Memoized Handlers**: Callbacks inside data hooks use `useCallback` to prevent unnecessary component re-renders.
+2. **Accessible Form Controls**: Standardized inputs feature accessible visual focus states and ARIA labels.
+3. **Graceful Loading Skeletons**: View components render pulse loading skeletons while `loading === true` to avoid layout shifts.
+
+---

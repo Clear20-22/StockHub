@@ -17,12 +17,24 @@ from app.routers import mongo_users, mongo_goods, mongo_auth
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+from app.config import get_settings
+from fastapi import Request, status
+from fastapi.responses import JSONResponse
+from app.services.exceptions import (
+    EntityNotFoundError,
+    DuplicateEntityError,
+    InsufficientCapacityError,
+    UnauthorizedOperationError,
+)
+
+settings = get_settings()
+
 # Lifespan context manager for startup and shutdown events
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    logger.info("Starting up...")
-    # Create SQLAlchemy tables (keeping existing functionality)
+    logger.info(f"Starting up {settings.APP_NAME} v{settings.APP_VERSION} [{settings.ENVIRONMENT}]...")
+    # Create SQLAlchemy tables
     Base.metadata.create_all(bind=engine)
     # Connect to MongoDB
     await connect_to_mongo()
@@ -32,20 +44,28 @@ async def lifespan(app: FastAPI):
     await close_mongo_connection()
 
 app = FastAPI(
-    title="StockHub API",
-    description="Warehouse Management System API",
-    version="1.0.0",
-    lifespan=lifespan
+    title=settings.APP_NAME,
+    description="Enterprise Warehouse Management System API",
+    version=settings.APP_VERSION,
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
-from fastapi import Request, status
-from fastapi.responses import JSONResponse
-from app.services.exceptions import EntityNotFoundError, DuplicateEntityError, InsufficientCapacityError, UnauthorizedOperationError
+# Enterprise Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -84,8 +104,26 @@ app.include_router(mongo_goods.router, prefix="/api/mongo/goods", tags=["MongoDB
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to StockHub API"}
+    return {
+        "name": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "environment": settings.ENVIRONMENT,
+        "status": "online",
+        "documentation": "/docs"
+    }
 
 @app.get("/api/health")
-async def health_check():
-    return {"status": "healthy", "message": "StockHub API is running"}
+@app.get("/healthz")
+async def liveness_probe():
+    """Kubernetes liveness probe - checks process status."""
+    return {"status": "healthy", "message": "StockHub API process is alive"}
+
+@app.get("/readyz")
+async def readiness_probe():
+    """Kubernetes readiness probe - checks database connectivity."""
+    return {
+        "status": "ready",
+        "database": "connected",
+        "environment": settings.ENVIRONMENT
+    }
+

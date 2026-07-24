@@ -2,53 +2,72 @@
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?style=flat&logo=FastAPI&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18+-61DAFB.svg?style=flat&logo=react&logoColor=black)](https://react.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED.svg?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Nginx](https://img.shields.io/badge/Nginx-Alpine-009639.svg?style=flat&logo=nginx&logoColor=white)](https://nginx.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.3+-38B2AC.svg?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**StockHub** is an enterprise-grade Warehouse Management and Customer Storage Application designed for high performance, concurrency safety, and scalable role-based warehouse operations.
+**StockHub** is an enterprise-grade Warehouse Management and Storage Infrastructure Application engineered for high-concurrency operations, optimistic transactional locking, cloud-native containerization, and role-based access control (RBAC).
 
 ---
 
 ## 🌟 Key Features
 
 ### 👤 1. Customer Portal
-* **Storage Requests**: Submit warehouse storage space applications (`ApplyToStore`).
-* **Inventory Tracking**: Monitor personal stored items and stock levels in real time.
-* **Capacity Monitoring**: Inspect warehouse branch capacity across locations (`BranchCapacity`).
-* **Profile & Settings**: Manage account information and notification preferences.
+* **Storage Space Applications**: Submit structured warehouse storage applications (`ApplyToStore`).
+* **Real-time Inventory Tracker**: Monitor personal stored inventory and stock metrics.
+* **Branch Capacity Explorer**: Inspect real-time cubic capacity across warehouse locations.
+* **User Profile**: Account management and authentication control.
 
 ### 👷 2. Employee Workspace
 * **Application Processing**: Review, approve, or reject customer storage applications (`CustomerApplications`).
-* **Work Duty Assignments**: Track assigned storage and retrieval tasks (`Assignments`).
-* **Branch Inventory Audits**: Inspect real-time stock levels, log time trackers, and generate reports (`Inventory`, `TimeTracker`, `Reports`).
+* **Work Duty Assignments**: Monitor assigned storage tasks and branch duties (`Assignments`).
+* **Inventory Stock Audits**: Audit real-time stock levels, record work time trackers, and generate reports.
 
 ### 👑 3. Admin Control Center
-* **Full Inventory CRUD**: Manage items, bulk import inventory, and perform manual stock updates (`ManageGoods`).
-* **Branch Management**: Provision warehouse locations, monitor available cubic capacity, and set managers (`ManageBranches`).
-* **User & Role Administration**: Manage system accounts and inspect detailed user activity logs (`ManageUsers`).
+* **Full Inventory CRUD**: Bulk import items, edit stock parameters, and trigger manual adjustments (`ManageGoods`).
+* **Branch Provisioning**: Manage physical warehouse branches, set branch managers, and adjust cubic space (`ManageBranches`).
+* **User & Role Administration**: Manage system user accounts and inspect security audit logs (`ManageUsers`).
 
 ---
 
-## 🏛️ System Architecture & Design Patterns
+## 🏛️ System Architecture & Technology Stack
 
-StockHub is built using production-grade software design patterns:
+StockHub is architected according to **Clean Architecture** and 12-Factor App principles:
 
-* **Domain Service Layer Pattern**: Decouples API route controllers from database queries using dedicated domain services (`UserService`, `GoodsService`).
-* **Unit of Work (UoW) Pattern**: Manages database sessions to guarantee atomic multi-table transactions.
-* **Repository Factory Pattern**: Abstracts storage implementations (`AbstractUserRepository`, `SqlUserRepository`), unifying dual-database operations (SQLite / MongoDB).
-* **Dependency Injection Auth Dependencies**: Centralizes JWT token extraction and role-based access control (`require_admin`, `require_employee_or_admin`).
-* **Refresh Token Rotation**: Implements dual-token security (30-min Access Tokens + 7-Day Refresh Tokens with `/api/auth/refresh`).
-* **Optimistic Concurrency Locking**: Prevents race conditions during simultaneous stock updates using automatic ORM `version` tracking.
-* **Custom React Data Hooks**: Decouples UI rendering from asynchronous network operations (`useGoods`, `useBranches`).
+```mermaid
+graph LR
+    User[Client Browser] --> Nginx[Nginx Web Server / Frontend Container]
+    Nginx -- REST API JSON --> FastAPI[FastAPI Backend Container]
+    
+    subgraph FastAPI Application Layer
+        FastAPI --> Auth[JWT & RBAC Middleware]
+        Auth --> Service[Domain Services]
+        Service --> UoW[Unit of Work Session]
+        Service --> Repo[Repository Factory]
+    end
 
----
+    Repo --> SQLite[(SQLite RDBMS)]
+    Repo --> Mongo[(MongoDB NoSQL)]
+```
 
-## 🛠️ Technology Stack
-
+### Stack Components
 * **Frontend**: React 18, Vite, React Router v7, Tailwind CSS, Lucide Icons, Framer Motion, Axios.
-* **Backend**: Python FastAPI, Uvicorn ASGI, SQLAlchemy ORM, Pydantic v2, Passlib (bcrypt), PyJWT/Jose.
-* **Databases**: SQLite (primary relational database) and MongoDB support (via Motor/Beanie).
+* **Backend**: Python FastAPI, Uvicorn ASGI, Pydantic v2 Settings, SQLAlchemy ORM, Passlib (bcrypt), PyJWT/Jose.
+* **Containerization**: Docker multi-stage builds, Nginx Alpine, Docker Compose.
+* **Databases**: SQLite (primary relational DB) and MongoDB (document activity log engine).
+
+---
+
+## 📚 Technical Documentation
+
+Comprehensive architectural guides and specifications reside in [`docs/`](file:///Users/jubayerahmedsojib/Documents/GitHub/StockHub/docs/):
+
+* 🏛️ [**Architecture & Design Patterns Guide**](file:///Users/jubayerahmedsojib/Documents/GitHub/StockHub/docs/ARCHITECTURE_AND_DESIGN_PATTERNS.md): Service Layer, Unit of Work, Repository Factory, and Dependency Injection.
+* 🔒 [**Security & Authentication Architecture**](file:///Users/jubayerahmedsojib/Documents/GitHub/StockHub/docs/SECURITY_AND_AUTHENTICATION.md): Dual-token JWT mechanics, Bcrypt hashing, RBAC matrix, and OWASP mitigations.
+* ⚡ [**Concurrency & Database Design Guide**](file:///Users/jubayerahmedsojib/Documents/GitHub/StockHub/docs/CONCURRENCY_AND_DATABASE_DESIGN.md): ER Diagrams, Optimistic Concurrency Control, lost update prevention.
+* 🎨 [**Frontend Architecture & Hooks Guide**](file:///Users/jubayerahmedsojib/Documents/GitHub/StockHub/docs/FRONTEND_ARCHITECTURE_AND_HOOKS.md): Component topology, custom hooks, and Axios HTTP interceptors.
 
 ---
 
@@ -56,100 +75,94 @@ StockHub is built using production-grade software design patterns:
 
 ```text
 StockHub/
-├── docs/                             # Documentation & Presentation Slides
-│   ├── About Project.key
-│   └── website-screenshots/
+├── Dockerfile                        # Frontend Multi-Stage Docker Build
+├── docker-compose.yml                # Enterprise Container Orchestration
+├── nginx.conf                        # Nginx Production Web Server Config
+├── docs/                             # Architecture & Design Specifications
+│   ├── ARCHITECTURE_AND_DESIGN_PATTERNS.md
+│   ├── SECURITY_AND_AUTHENTICATION.md
+│   ├── CONCURRENCY_AND_DATABASE_DESIGN.md
+│   ├── FRONTEND_ARCHITECTURE_AND_HOOKS.md
+│   └── README.md
 │
-├── backend/                          # FastAPI Enterprise Backend
+├── backend/                          # FastAPI Backend Engine
 │   ├── app/
-│   │   ├── services/                 # Domain Services (UserService, GoodsService)
-│   │   ├── repositories/             # Repository Factory Pattern
-│   │   ├── auth_dependencies.py      # Dependency Injection Auth & Roles
+│   │   ├── config.py                 # Pydantic BaseSettings Configuration
+│   │   ├── services/                 # Business Domain Services
+│   │   ├── repositories/             # Repository Abstraction Factory
+│   │   ├── auth_dependencies.py      # Dependency Injection Authorization
 │   │   ├── unit_of_work.py           # Unit of Work Transaction Manager
-│   │   ├── auth_handler.py           # Access & Refresh JWT Handlers
-│   │   ├── database.py               # SQLAlchemy ORM Models (with Optimistic Locking)
-│   │   ├── crud.py                   # Data Access Methods
-│   │   ├── schemas.py                # Pydantic Schemas
-│   │   ├── main.py                   # FastAPI Application & Exception Middleware
-│   │   └── routers/                  # REST API Endpoints
-│   ├── scripts/                      # DB Migration & Data Seeding Scripts
-│   ├── tests/                        # Backend API Test Suites
-│   ├── start_server.py               # Backend Launcher
+│   │   ├── auth_handler.py           # JWT Access & Refresh Token Processing
+│   │   ├── database.py               # Relational ORM Models (Optimistic Locking)
+│   │   ├── main.py                   # FastAPI Engine & Security Middleware
+│   │   └── routers/                  # API Controllers
+│   ├── Dockerfile                    # Backend Multi-Stage Docker Build
 │   ├── requirements.txt              # Python Dependencies
-│   └── stockhub.db                   # Primary SQLite Database
+│   └── stockhub.db                   # Primary Relational Database
 │
-└── src/                              # React Frontend
-    ├── assets/                       # Static Assets
-    ├── components/
-    │   ├── admin/                    # Admin Components & Modals
-    │   ├── common/                   # Shared UI Elements
-    │   ├── customer/                 # Customer Components
-    │   └── layout/                   # Navbar & Footer
-    ├── contexts/                     # Auth & Notification Context Providers
+└── src/                              # React Single Page Application
+    ├── components/                   # Admin, Customer & Shared UI Components
+    ├── contexts/                     # React Context Providers (Auth, Notification)
     ├── hooks/                        # Custom Data Hooks (useGoods, useBranches)
-    ├── pages/                        # Application Route Views
-    ├── services/                     # Axios API Services
-    ├── App.jsx                       # Routing & Main App Container
-    └── main.jsx                      # Application Entry Point
+    ├── pages/                        # View Container Routes
+    └── services/                     # Axios API Service Facade
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Quickstart & Deployment
 
-### Prerequisites
-* **Node.js** (v18.0 or higher)
-* **Python** (v3.10 or higher)
+### Option A: Production Container Deployment (Recommended)
+
+Using **Docker Compose**, you can build and launch the entire enterprise stack with a single command:
+
+```bash
+# Clone repository and start container stack
+docker compose up --build -d
+```
+
+The stack exposes:
+* **Frontend Application**: `http://localhost` (Port 80)
+* **Backend REST API**: `http://localhost:8000` (Port 8000)
+* **Interactive OpenAPI Specs**: `http://localhost:8000/docs`
+* **Health Probes**: `http://localhost:8000/healthz` and `http://localhost:8000/readyz`
 
 ---
 
-### 1. Backend Setup
+### Option B: Local Development Setup
 
+#### 1. Backend Setup
 ```bash
-# Navigate to the backend directory
 cd backend
-
-# Create a virtual environment (optional but recommended)
 python -m venv venv
-source venv/bin/activate  # On Windows use: venv\Scripts\activate
-
-# Install dependencies
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
-
-# Start the FastAPI backend server
 python start_server.py
 ```
 
-The backend server will run on `http://localhost:8000`. You can inspect the interactive OpenAPI documentation at **`http://localhost:8000/docs`**.
-
----
-
-### 2. Frontend Setup
-
+#### 2. Frontend Setup
 ```bash
-# From the root directory, install Node dependencies
+# From workspace root
 npm install
-
-# Start the Vite development server
 npm run dev
 ```
 
-The frontend application will run on `http://localhost:5173`.
-
 ---
 
-## 🔑 Default API Endpoints Overview
+## 🔑 Key API Endpoints Reference
 
-| Method | Endpoint | Description | Role Required |
+| Method | Endpoint | Description | Access Level |
 | :--- | :--- | :--- | :--- |
+| `GET` | `/healthz` | Kubernetes Liveness Probe | Public |
+| `GET` | `/readyz` | Kubernetes Readiness Probe | Public |
 | `POST` | `/api/auth/register` | Register new user account | Public |
-| `POST` | `/api/auth/login` | Login and receive Access + Refresh tokens | Public |
-| `POST` | `/api/auth/refresh` | Renew access token using refresh token | Public |
-| `GET` | `/api/goods/` | List all inventory goods | Authenticated |
-| `POST` | `/api/goods/` | Add new storage item | Customer / Admin |
-| `GET` | `/api/branches/` | List warehouse branches & capacity | Public / Authenticated |
+| `POST` | `/api/auth/login` | Authenticate and obtain JWT Access & Refresh tokens | Public |
+| `POST` | `/api/auth/refresh` | Renew short-lived Access Token | Public |
+| `GET` | `/api/goods/` | List warehouse inventory goods | Authenticated |
+| `POST` | `/api/goods/` | Add inventory item | Customer / Admin |
+| `GET` | `/api/branches/` | List warehouse branches & available space | Public / Authenticated |
 | `POST` | `/api/branches/` | Provision new branch location | Admin |
-| `GET` | `/api/users/` | List system users | Admin |
+| `GET` | `/api/users/` | List system user accounts | Admin |
 
 ---
 
