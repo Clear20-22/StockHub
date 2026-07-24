@@ -1,35 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app import crud
 from app import schemas
 from app.database import get_db
-from app.auth_handler import decode_jwt
+from app.auth_dependencies import get_current_user, require_employee_or_admin
+from app.services.goods_service import GoodsService
 
 router = APIRouter()
-security = HTTPBearer()
-
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    """Get current user from JWT token"""
-    payload = decode_jwt(credentials.credentials)
-    username = payload.get("sub")
-    user = crud.get_user_by_username(db, username=username)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-        )
-    return user
-
-def require_employee_or_admin(current_user = Depends(get_current_user)):
-    """Require employee or admin role"""
-    if current_user.role not in ["employee", "admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
-        )
-    return current_user
 
 @router.get("/", response_model=List[schemas.Goods])
 def read_goods(
@@ -40,8 +17,8 @@ def read_goods(
     db: Session = Depends(get_db)
 ):
     """Get all goods with optional filtering"""
-    goods = crud.get_goods(db, skip=skip, limit=limit, category=category, search=search)
-    return goods
+    service = GoodsService(db)
+    return service.list_goods(skip=skip, limit=limit)
 
 @router.get("/my-goods", response_model=List[schemas.Goods])
 def read_my_goods(
@@ -51,8 +28,8 @@ def read_my_goods(
     current_user = Depends(get_current_user)
 ):
     """Get current user's goods"""
-    goods = crud.get_goods_by_owner(db, owner_id=current_user.id, skip=skip, limit=limit)
-    return goods
+    service = GoodsService(db)
+    return service.list_goods(skip=skip, limit=limit, owner_id=current_user.id)
 
 @router.get("/{good_id}", response_model=schemas.Goods)
 def read_good(
@@ -60,10 +37,8 @@ def read_good(
     db: Session = Depends(get_db)
 ):
     """Get good by ID"""
-    db_good = crud.get_good(db, good_id=good_id)
-    if db_good is None:
-        raise HTTPException(status_code=404, detail="Good not found")
-    return db_good
+    service = GoodsService(db)
+    return service.get_goods_item(good_id)
 
 @router.post("/", response_model=schemas.Goods)
 def create_good(
@@ -71,48 +46,17 @@ def create_good(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    """Create new good"""
-    return crud.create_goods(db=db, goods=good, owner_id=current_user.id)
-
-@router.put("/{good_id}", response_model=schemas.Goods)
-def update_good(
-    good_id: int,
-    good_update: schemas.GoodsUpdate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    """Update good by ID"""
-    db_good = crud.get_good(db, good_id=good_id)
-    if db_good is None:
-        raise HTTPException(status_code=404, detail="Good not found")
-    
-    # Check if user owns the good or is employee/admin
-    if db_good.owner_id != current_user.id and current_user.role not in ["employee", "admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
-        )
-    
-    updated_good = crud.update_goods(db, good_id, good_update)
-    return updated_good
+    """Create new good via GoodsService"""
+    service = GoodsService(db)
+    return service.create_goods(goods_data=good, owner_id=current_user.id)
 
 @router.delete("/{good_id}")
 def delete_good(
     good_id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(require_employee_or_admin)
 ):
-    """Delete good by ID"""
-    db_good = crud.get_good(db, good_id=good_id)
-    if db_good is None:
-        raise HTTPException(status_code=404, detail="Good not found")
-    
-    # Check if user owns the good or is employee/admin
-    if db_good.owner_id != current_user.id and current_user.role not in ["employee", "admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
-        )
-    
-    crud.delete_goods(db, good_id)
+    """Delete good by ID via GoodsService"""
+    service = GoodsService(db)
+    service.delete_goods(good_id)
     return {"message": "Good deleted successfully"}

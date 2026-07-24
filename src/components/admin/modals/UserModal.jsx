@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { usersAPI } from '../../services/api';
-import { useNotification } from '../../contexts/NotificationContext';
+import { usersAPI } from '../../../services/api';
+import { useNotification } from '../../../contexts/NotificationContext';
 import { X, User, Mail, Shield, Building2, Save } from 'lucide-react';
 
 const UserModal = ({ user, branches, mode, onClose, onSave }) => {
