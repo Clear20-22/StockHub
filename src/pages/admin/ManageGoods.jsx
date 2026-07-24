@@ -21,9 +21,9 @@ import {
   BarChart3,
   History
 } from 'lucide-react';
-import GoodsModal from './GoodsModal';
-import StockUpdateModal from './StockUpdateModal';
-import GoodsImportModal from './GoodsImportModal';
+import GoodsModal from '../../components/admin/modals/GoodsModal';
+import StockUpdateModal from '../../components/admin/modals/StockUpdateModal';
+import GoodsImportModal from '../../components/admin/modals/GoodsImportModal';
 import AdminProtectedComponent from '../../components/admin/AdminProtectedComponent';
 
 const ManageGoods = ({ onBack }) => {

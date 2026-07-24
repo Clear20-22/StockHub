@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNotification } from '../../contexts/NotificationContext';
-import { goodsAPI } from '../../services/api';
+import { useNotification } from '../../../contexts/NotificationContext';
+import { goodsAPI } from '../../../services/api';
 import { 
   X, 
   Upload, 

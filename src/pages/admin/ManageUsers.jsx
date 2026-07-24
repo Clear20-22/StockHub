@@ -20,8 +20,8 @@ import {
   Building2
 } from 'lucide-react';
 import AdminProtectedComponent from '../../components/admin/AdminProtectedComponent';
-import UserModal from './UserModal';
-import UserActivityModal from './UserActivityModal';
+import UserModal from '../../components/admin/modals/UserModal';
+import UserActivityModal from '../../components/admin/modals/UserActivityModal';
 
 const ManageUsers = ({ onBack }) => {
   const { user: currentUser } = useAuth();

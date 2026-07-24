@@ -56,6 +56,7 @@ class Goods(Base):
     branch_id = Column(Integer, ForeignKey("branches.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    version = Column(Integer, default=1, nullable=False)
     
     # Relationships
     owner = relationship("User", back_populates="goods")

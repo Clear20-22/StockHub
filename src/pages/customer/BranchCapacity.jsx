@@ -15,34 +15,12 @@ import {
   Activity
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { branchAPI } from '../../services/branches';
+import { useBranches } from '../../hooks/useBranches';
 
 const BranchCapacity = () => {
   const navigate = useNavigate();
   const [selectedBranch, setSelectedBranch] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [branches, setBranches] = useState([]);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetchBranches();
-  }, []);
-
-  const fetchBranches = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const branchesData = await branchAPI.getAllBranches();
-      setBranches(branchesData);
-    } catch (error) {
-      console.error('Error fetching branches:', error);
-      setError('Failed to fetch branches. Please try again.');
-      // Fallback to empty array if API fails
-      setBranches([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { branches, loading, error, refresh: fetchBranches } = useBranches();
 
   const getCapacityPercentage = (used, total) => {
     if (!total || total === 0) return 0;

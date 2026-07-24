@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNotification } from '../../contexts/NotificationContext';
-import { goodsAPI } from '../../services/api';
+import { useNotification } from '../../../contexts/NotificationContext';
+import { goodsAPI } from '../../../services/api';
 import { 
   X, 
   Package, 

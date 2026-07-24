@@ -6,8 +6,8 @@ Run this script once to update your existing database schema
 import sys
 import os
 
-# Add the app directory to the Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
+# Add the backend directory to the Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from sqlalchemy import create_engine, text, Column, Integer, String, Text, DateTime, ForeignKey, Boolean
 from app.database import Base, engine, SessionLocal

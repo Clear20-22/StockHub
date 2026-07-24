@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { usersAPI } from '../../services/api';
+import { usersAPI } from '../../../services/api';
 import { X, Activity, Clock, User, Shield, Building2, Package, ClipboardList } from 'lucide-react';
 
 const UserActivityModal = ({ user, onClose }) => {

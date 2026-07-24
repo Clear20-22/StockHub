@@ -38,6 +38,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+from fastapi import Request, status
+from fastapi.responses import JSONResponse
+from app.services.exceptions import EntityNotFoundError, DuplicateEntityError, InsufficientCapacityError, UnauthorizedOperationError
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -46,6 +50,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Global Domain Exception Handlers
+@app.exception_handler(EntityNotFoundError)
+async def entity_not_found_handler(request: Request, exc: EntityNotFoundError):
+    return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)})
+
+@app.exception_handler(DuplicateEntityError)
+async def duplicate_entity_handler(request: Request, exc: DuplicateEntityError):
+    return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"detail": str(exc)})
+
+@app.exception_handler(InsufficientCapacityError)
+async def insufficient_capacity_handler(request: Request, exc: InsufficientCapacityError):
+    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(exc)})
+
+@app.exception_handler(UnauthorizedOperationError)
+async def unauthorized_operation_handler(request: Request, exc: UnauthorizedOperationError):
+    return JSONResponse(status_code=status.HTTP_403_FORBIDDEN, content={"detail": str(exc)})
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication (SQLite)"])
