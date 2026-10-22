@@ -3,7 +3,9 @@ MongoDB Data Verification Script
 This script verifies and displays the migrated data in MongoDB Atlas.
 """
 import asyncio
+import os
 from motor.motor_asyncio import AsyncIOMotorClient
+from dotenv import load_dotenv
 import logging
 from datetime import datetime
 
@@ -11,9 +13,10 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# MongoDB Atlas connection
-MONGODB_URL = "mongodb+srv://user3:kUNUn0gVmEWbKsc4@cluster1.o6n4bor.mongodb.net/stockhub?retryWrites=true&w=majority&appName=Cluster1"
-DATABASE_NAME = "stockhub"
+# MongoDB Atlas connection (set MONGODB_URL in backend/.env or the environment)
+load_dotenv()
+MONGODB_URL = os.environ["MONGODB_URL"]
+DATABASE_NAME = os.getenv("MONGODB_DB_NAME", "stockhub")
 
 async def verify_mongodb_data():
     """Verify and display migrated data"""

@@ -25,6 +25,11 @@ try:
         MONGODB_URL: str = "mongodb://localhost:27017"
         MONGODB_DB_NAME: str = "stockhub"
 
+        # Cloudinary (file uploads)
+        CLOUDINARY_CLOUD_NAME: str = ""
+        CLOUDINARY_API_KEY: str = ""
+        CLOUDINARY_API_SECRET: str = ""
+
         # CORS
         CORS_ORIGINS: List[str] = [
             "http://localhost:3000",
@@ -55,6 +60,10 @@ except ImportError:
         DB_ENGINE: str = os.getenv("DB_ENGINE", "sqlite")
         MONGODB_URL: str = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
         MONGODB_DB_NAME: str = os.getenv("MONGODB_DB_NAME", "stockhub")
+
+        CLOUDINARY_CLOUD_NAME: str = os.getenv("CLOUDINARY_CLOUD_NAME", "")
+        CLOUDINARY_API_KEY: str = os.getenv("CLOUDINARY_API_KEY", "")
+        CLOUDINARY_API_SECRET: str = os.getenv("CLOUDINARY_API_SECRET", "")
 
         CORS_ORIGINS: List[str] = [
             origin.strip()

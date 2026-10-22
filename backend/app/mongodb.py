@@ -5,6 +5,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from typing import Optional
 import logging
 
+from app.config import get_settings
+
 logger = logging.getLogger(__name__)
 
 class MongoDB:
@@ -14,9 +16,10 @@ class MongoDB:
 
 mongodb = MongoDB()
 
-# MongoDB connection string
-MONGODB_URL = "mongodb+srv://user3:kUNUn0gVmEWbKsc4@cluster1.o6n4bor.mongodb.net/stockhub?retryWrites=true&w=majority&appName=Cluster1"
-DATABASE_NAME = "stockhub"
+# MongoDB connection settings are loaded from the environment / backend/.env
+settings = get_settings()
+MONGODB_URL = settings.MONGODB_URL
+DATABASE_NAME = settings.MONGODB_DB_NAME
 
 async def connect_to_mongo():
     """Create database connection"""

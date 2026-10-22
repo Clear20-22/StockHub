@@ -3,11 +3,13 @@ Data Migration Script: SQLite to MongoDB Atlas
 This script migrates all existing data from the SQLite database to MongoDB Atlas.
 """
 import asyncio
+import os
 import sqlite3
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 import logging
 from motor.motor_asyncio import AsyncIOMotorClient
+from dotenv import load_dotenv
 from bson import ObjectId
 
 # Configure logging
@@ -17,9 +19,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# MongoDB Atlas connection string
-MONGODB_URL = "mongodb+srv://user3:kUNUn0gVmEWbKsc4@cluster1.o6n4bor.mongodb.net/stockhub?retryWrites=true&w=majority&appName=Cluster1"
-DATABASE_NAME = "stockhub"
+# MongoDB Atlas connection string (set MONGODB_URL in backend/.env or the environment)
+load_dotenv()
+MONGODB_URL = os.environ["MONGODB_URL"]
+DATABASE_NAME = os.getenv("MONGODB_DB_NAME", "stockhub")
 
 # SQLite database path
 SQLITE_DB_PATH = "stockhub.db"

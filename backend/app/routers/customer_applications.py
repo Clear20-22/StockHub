@@ -13,12 +13,14 @@ from app.database import get_db, CustomerApplication, User
 from app.schemas import CustomerApplicationCreate, CustomerApplication as CustomerApplicationSchema, CustomerApplicationUpdate
 from app.auth_handler import decode_jwt
 from app import crud
+from app.config import get_settings
 
 # Configure Cloudinary
+settings = get_settings()
 cloudinary.config(
-    cloud_name="dbqrx0n5g",
-    api_key="***REMOVED_SECRET***",
-    api_secret="***REMOVED_SECRET***"
+    cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+    api_key=settings.CLOUDINARY_API_KEY,
+    api_secret=settings.CLOUDINARY_API_SECRET
 )
 
 router = APIRouter()
