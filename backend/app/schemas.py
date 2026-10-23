@@ -1,7 +1,9 @@
-from pydantic import BaseModel, EmailStr, validator
-from typing import Optional, List, Union
+from pydantic import BaseModel, EmailStr, Field, validator
+from typing import Optional, List, Union, Literal
 from datetime import datetime
 import json
+
+Role = Literal["customer", "employee", "admin"]
 
 # User Schemas
 class UserBase(BaseModel):
@@ -14,15 +16,25 @@ class UserBase(BaseModel):
     branch_id: Optional[int] = None
 
 class UserCreate(UserBase):
-    password: str
-    role: str
+    password: str = Field(..., min_length=8, max_length=72)
+    role: Role = "customer"
+
+class UserSelfUpdate(BaseModel):
+    """Fields users may change on their own profile (no role, status or HR fields)."""
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    emergency_contact: Optional[str] = None
+    preferences: Optional[dict] = None
+    notification_settings: Optional[dict] = None
 
 class UserUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
-    role: Optional[str] = None
+    role: Optional[Role] = None
     is_active: Optional[bool] = None
     branch_id: Optional[int] = None
     emergency_contact: Optional[str] = None

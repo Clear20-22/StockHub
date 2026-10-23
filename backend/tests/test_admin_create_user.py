@@ -3,6 +3,7 @@
 Test script for MongoDB admin create user functionality
 """
 import asyncio
+import os
 import httpx
 import json
 from datetime import datetime
@@ -20,8 +21,8 @@ async def test_admin_create_user():
         # Step 1: Login as admin to get token
         print("\n📋 Step 1: Login as admin...")
         admin_credentials = {
-            "username": "admin",  # Replace with actual admin username
-            "password": "admin123"  # Replace with actual admin password
+            "username": os.getenv("TEST_ADMIN_USERNAME", "admin"),
+            "password": os.environ["TEST_ADMIN_PASSWORD"]
         }
         
         try:

@@ -1,22 +1,15 @@
 import axios from 'axios';
+import { API_BASE_URL as API_ORIGIN } from './api';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = `${API_ORIGIN}/api`;
 
-// Create axios instance with default config
+// Create axios instance with default config; the auth token travels in an httpOnly cookie
 const api = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
-});
-
-// Add auth token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
 });
 
 // Branch API endpoints

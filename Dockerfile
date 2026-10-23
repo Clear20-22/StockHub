@@ -12,6 +12,9 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+# Empty = call the API on the same origin through the nginx /api proxy
+ARG VITE_API_BASE_URL=""
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 
 # --- Stage 2: Production Web Server ---

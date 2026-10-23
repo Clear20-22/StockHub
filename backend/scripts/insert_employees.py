@@ -5,6 +5,7 @@ Script to insert employee data into the StockHub database
 
 import sqlite3
 import bcrypt
+import secrets
 from datetime import datetime
 
 def hash_password(password: str) -> str:
@@ -25,7 +26,6 @@ def insert_employees():
         {
             'username': 'jane_smith',
             'email': 'jane.smith@stockhub.com',
-            'password': 'employee123',
             'first_name': 'Jane',
             'last_name': 'Smith',
             'phone': '+1-555-0101',
@@ -35,7 +35,6 @@ def insert_employees():
         {
             'username': 'mike_wilson',
             'email': 'mike.wilson@stockhub.com',
-            'password': 'employee123',
             'first_name': 'Mike',
             'last_name': 'Wilson',
             'phone': '+1-555-0102',
@@ -45,7 +44,6 @@ def insert_employees():
         {
             'username': 'sarah_johnson',
             'email': 'sarah.johnson@stockhub.com',
-            'password': 'employee123',
             'first_name': 'Sarah',
             'last_name': 'Johnson',
             'phone': '+1-555-0103',
@@ -55,7 +53,6 @@ def insert_employees():
         {
             'username': 'david_brown',
             'email': 'david.brown@stockhub.com',
-            'password': 'employee123',
             'first_name': 'David',
             'last_name': 'Brown',
             'phone': '+1-555-0104',
@@ -65,7 +62,6 @@ def insert_employees():
         {
             'username': 'lisa_davis',
             'email': 'lisa.davis@stockhub.com',
-            'password': 'employee123',
             'first_name': 'Lisa',
             'last_name': 'Davis',
             'phone': '+1-555-0105',
@@ -75,7 +71,6 @@ def insert_employees():
         {
             'username': 'tom_anderson',
             'email': 'tom.anderson@stockhub.com',
-            'password': 'employee123',
             'first_name': 'Tom',
             'last_name': 'Anderson',
             'phone': '+1-555-0106',
@@ -85,7 +80,6 @@ def insert_employees():
         {
             'username': 'emily_wilson',
             'email': 'emily.wilson@stockhub.com',
-            'password': 'employee123',
             'first_name': 'Emily',
             'last_name': 'Wilson',
             'phone': '+1-555-0107',
@@ -95,7 +89,6 @@ def insert_employees():
         {
             'username': 'james_miller',
             'email': 'james.miller@stockhub.com',
-            'password': 'employee123',
             'first_name': 'James',
             'last_name': 'Miller',
             'phone': '+1-555-0108',
@@ -124,7 +117,10 @@ def insert_employees():
                 continue
             
             # Hash the password
-            hashed_password = hash_password(employee['password'])
+            # Generate a random password per employee instead of shipping known ones
+            password = secrets.token_urlsafe(12)
+            print(f"   Generated password for {employee['username']}: {password}")
+            hashed_password = hash_password(password)
             
             # Insert employee
             cursor.execute("""

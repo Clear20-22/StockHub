@@ -1,21 +1,24 @@
 """
 Centralized Authentication & Role Authorization Dependencies for FastAPI Routers.
 """
-from fastapi import Depends, HTTPException, status
+from typing import Optional
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app import crud
 from app.database import get_db
-from app.auth_handler import decode_jwt
+from app.auth_handler import decode_jwt, get_request_token
 
-security = HTTPBearer()
+# auto_error=False so browsers can authenticate with the httpOnly cookie instead of the header
+security = HTTPBearer(auto_error=False)
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
 ):
-    """Extract and validate current user from JWT Bearer token."""
-    payload = decode_jwt(credentials.credentials)
+    """Extract and validate current user from the JWT (Bearer header or auth cookie)."""
+    payload = decode_jwt(get_request_token(request, credentials))
     username = payload.get("sub")
     if not username:
         raise HTTPException(
@@ -28,6 +31,11 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
         )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is deactivated",
+        )
     return user
 
 def require_roles(allowed_roles: list):
@@ -36,7 +44,7 @@ def require_roles(allowed_roles: list):
         if current_user.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Operation requires one of the following roles: {allowed_roles}"
+                detail="Not enough permissions"
             )
         return current_user
     return role_checker

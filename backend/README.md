@@ -498,7 +498,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 # Login to get token
 curl -X POST "http://localhost:8000/auth/login" \
      -H "Content-Type: application/json" \
-     -d '{"username": "customer1", "password": "cust123"}'
+     -d '{"username": "customer1", "password": "<your-password>"}'
 
 # Use token to create goods
 curl -X POST "http://localhost:8000/goods/" \
@@ -526,7 +526,7 @@ sqlite3 stockhub.db "SELECT * FROM goods JOIN users ON goods.owner_id = users.id
 ### 6. Sample Test Data
 
 The seed script creates:
-- **Users**: admin, employee1, customer1 (passwords: admin123, emp123, cust123)
+- **Users**: admin, employee1, customer1 (passwords come from `SEED_ADMIN_PASSWORD`, `SEED_EMPLOYEE_PASSWORD` and `SEED_CUSTOMER_PASSWORD`; if unset, random passwords are generated and printed once)
 - **Branches**: New York, Los Angeles, Chicago
 - **Goods**: MacBook Pro, iPhone 15, Office Chair, Standing Desk
 - **Assignments**: Inventory check, stock replenishment tasks

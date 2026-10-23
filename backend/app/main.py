@@ -17,7 +17,7 @@ from app.routers import mongo_users, mongo_goods, mongo_auth
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from app.config import get_settings
+from app.config import get_settings, validate_production_settings
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from app.services.exceptions import (
@@ -28,6 +28,8 @@ from app.services.exceptions import (
 )
 
 settings = get_settings()
+validate_production_settings(settings)
+IS_PRODUCTION = settings.ENVIRONMENT == "production"
 
 # Lifespan context manager for startup and shutdown events
 @asynccontextmanager
@@ -48,8 +50,10 @@ app = FastAPI(
     description="Enterprise Warehouse Management System API",
     version=settings.APP_VERSION,
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
+    # Interactive API docs are only exposed outside production
+    docs_url=None if IS_PRODUCTION else "/docs",
+    redoc_url=None if IS_PRODUCTION else "/redoc",
+    openapi_url=None if IS_PRODUCTION else "/openapi.json",
 )
 
 # Enterprise Security Headers Middleware
@@ -109,7 +113,7 @@ async def root():
         "version": settings.APP_VERSION,
         "environment": settings.ENVIRONMENT,
         "status": "online",
-        "documentation": "/docs"
+        "documentation": None if IS_PRODUCTION else "/docs"
     }
 
 @app.get("/api/health")

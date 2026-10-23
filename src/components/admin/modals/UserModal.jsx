@@ -70,8 +70,8 @@ const UserModal = ({ user, branches, mode, onClose, onSave }) => {
     if (mode === 'add') {
       if (!formData.password) {
         newErrors.password = 'Password is required';
-      } else if (formData.password.length < 6) {
-        newErrors.password = 'Password must be at least 6 characters';
+      } else if (formData.password.length < 8) {
+        newErrors.password = 'Password must be at least 8 characters';
       }
 
       if (formData.password !== formData.confirm_password) {
@@ -81,8 +81,8 @@ const UserModal = ({ user, branches, mode, onClose, onSave }) => {
 
     // Password validation for editing (only if password is provided)
     if (mode === 'edit' && formData.password) {
-      if (formData.password.length < 6) {
-        newErrors.password = 'Password must be at least 6 characters';
+      if (formData.password.length < 8) {
+        newErrors.password = 'Password must be at least 8 characters';
       }
 
       if (formData.password !== formData.confirm_password) {

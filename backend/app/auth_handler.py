@@ -1,7 +1,9 @@
 from jose import jwt
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
-from fastapi import HTTPException, status
+from typing import Optional
+from fastapi import HTTPException, Request, Response, status
+from fastapi.security import HTTPAuthorizationCredentials
 from app.config import get_settings
 
 settings = get_settings()
@@ -11,6 +13,9 @@ REFRESH_SECRET_KEY = settings.REFRESH_SECRET_KEY
 ALGORITHM = settings.ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
+
+# The browser keeps the access token in an httpOnly cookie so page scripts can't read it
+ACCESS_TOKEN_COOKIE = "access_token"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -65,3 +70,36 @@ def decode_refresh_token(token: str):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token",
         )
+
+def get_request_token(request: Request, credentials: Optional[HTTPAuthorizationCredentials]) -> str:
+    """Return the access token from the Authorization header, falling back to the auth cookie."""
+    if credentials:
+        return credentials.credentials
+    token = request.cookies.get(ACCESS_TOKEN_COOKIE)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return token
+
+def set_auth_cookie(response: Response, access_token: str):
+    response.set_cookie(
+        key=ACCESS_TOKEN_COOKIE,
+        value=access_token,
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        httponly=True,
+        secure=settings.ENVIRONMENT == "production",
+        samesite="strict",
+        path="/",
+    )
+
+def clear_auth_cookie(response: Response):
+    response.delete_cookie(
+        key=ACCESS_TOKEN_COOKIE,
+        httponly=True,
+        secure=settings.ENVIRONMENT == "production",
+        samesite="strict",
+        path="/",
+    )

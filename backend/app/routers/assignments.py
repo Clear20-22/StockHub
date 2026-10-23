@@ -1,44 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app import crud
 from app import schemas
 from app.database import get_db
-from app.auth_handler import decode_jwt
+from app.auth_dependencies import require_admin, require_employee_or_admin
 
 router = APIRouter()
-security = HTTPBearer()
-
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    """Get current user from JWT token"""
-    payload = decode_jwt(credentials.credentials)
-    username = payload.get("sub")
-    user = crud.get_user_by_username(db, username=username)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-        )
-    return user
-
-def require_employee_or_admin(current_user = Depends(get_current_user)):
-    """Require employee or admin role"""
-    if current_user.role not in ["employee", "admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
-        )
-    return current_user
-
-def require_admin(current_user = Depends(get_current_user)):
-    """Require admin role"""
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
-        )
-    return current_user
 
 @router.get("/", response_model=List[schemas.Assignment])
 def read_assignments(

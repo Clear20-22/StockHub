@@ -7,7 +7,7 @@ import os
 
 def migrate_users_table():
     """Add new fields to users table"""
-    db_path = "StockHub_db.db"
+    db_path = "stockhub.db"
     
     # Check if database exists
     if not os.path.exists(db_path):

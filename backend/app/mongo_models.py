@@ -2,9 +2,11 @@
 Enhanced MongoDB Pydantic models for all migrated collections
 """
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime
 from bson import ObjectId
+
+Role = Literal["customer", "employee", "admin"]
 
 class MongoUser(BaseModel):
     """MongoDB User model"""
@@ -30,10 +32,10 @@ class MongoUser(BaseModel):
 
 class UserCreate(BaseModel):
     """Create user model"""
-    username: str
+    username: str = Field(..., min_length=3, max_length=50)
     email: str
-    password: str
-    role: str
+    password: str = Field(..., min_length=8, max_length=72)
+    role: Role = "customer"
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
@@ -208,7 +210,7 @@ class UserUpdate(BaseModel):
     last_name: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
-    role: Optional[str] = None
+    role: Optional[Role] = None
     is_active: Optional[bool] = None
     branch_id: Optional[int] = None
 

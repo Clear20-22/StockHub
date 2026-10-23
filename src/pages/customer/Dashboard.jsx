@@ -12,9 +12,11 @@ import {
   User
 } from 'lucide-react';
 import { authAPI, goodsAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState({
     name: 'John Smith',
@@ -36,8 +38,7 @@ const CustomerDashboard = () => {
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (token) {
+        if (user) {
           const response = await authAPI.getCurrentUser();
           const userData = response.data;
           
@@ -53,15 +54,14 @@ const CustomerDashboard = () => {
     };
 
     fetchUserInfo();
-  }, []);
+  }, [user]);
 
   // Fetch customer goods from backend
   useEffect(() => {
     const fetchCustomerGoods = async () => {
       try {
         setGoodsLoading(true);
-        const token = localStorage.getItem('token');
-        if (token) {
+        if (user) {
           const response = await goodsAPI.getMyGoods();
           const goodsData = response.data;
           
@@ -88,7 +88,7 @@ const CustomerDashboard = () => {
     };
 
     fetchCustomerGoods();
-  }, []);
+  }, [user]);
 
   // Mock stats data with real goods count
   const stats = {
@@ -127,8 +127,8 @@ const CustomerDashboard = () => {
     });
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
+  const handleLogout = async () => {
+    await logout();
     window.location.href = '/login';
   };
 

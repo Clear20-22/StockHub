@@ -3,9 +3,20 @@ from database import SessionLocal, engine, Base
 import crud
 import schemas
 from auth_handler import get_password_hash
+import os
+import secrets
 
 # Create tables
 Base.metadata.create_all(bind=engine)
+
+def seed_password(env_name: str) -> str:
+    """Use the password from the environment, or generate a random one and print it once."""
+    password = os.getenv(env_name)
+    if password:
+        return password
+    password = secrets.token_urlsafe(12)
+    print(f"{env_name} not set - generated password: {password}")
+    return password
 
 def seed_data():
     db = SessionLocal()
@@ -15,7 +26,7 @@ def seed_data():
         admin_user = schemas.UserCreate(
             username="admin",
             email="admin@stockhub.com",
-            password="admin123",
+            password=seed_password("SEED_ADMIN_PASSWORD"),
             role="admin",
             first_name="Admin",
             last_name="User",
@@ -33,7 +44,7 @@ def seed_data():
         employee_user = schemas.UserCreate(
             username="employee1",
             email="employee1@stockhub.com",
-            password="emp123",
+            password=seed_password("SEED_EMPLOYEE_PASSWORD"),
             role="employee",
             first_name="John",
             last_name="Employee",
@@ -51,7 +62,7 @@ def seed_data():
         customer_user = schemas.UserCreate(
             username="customer1",
             email="customer1@stockhub.com",
-            password="cust123",
+            password=seed_password("SEED_CUSTOMER_PASSWORD"),
             role="customer",
             first_name="Jane",
             last_name="Customer",

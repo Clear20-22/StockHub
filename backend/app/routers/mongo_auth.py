@@ -2,9 +2,9 @@
 MongoDB Authentication router - handles user registration and login with MongoDB Atlas
 Replaces SQLite-based authentication with MongoDB operations
 """
-from fastapi import APIRouter, HTTPException, status, Request, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import APIRouter, HTTPException, status, Request, Response, Depends
 from datetime import datetime, timedelta
+import logging
 from typing import Optional, List
 from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
@@ -12,15 +12,20 @@ from pymongo.errors import DuplicateKeyError
 from app.mongodb import get_database
 from app.mongo_models import MongoUser, UserCreate, UserLogin, UserResponse, UserUpdate, Token
 from app.auth_handler import (
-    create_access_token, 
-    decode_jwt, 
-    get_password_hash, 
-    verify_password, 
+    create_access_token,
+    get_password_hash,
+    verify_password,
+    set_auth_cookie,
+    clear_auth_cookie,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
+from app.identity import find_identity_conflict
+from app.mongo_auth_dependencies import get_current_mongo_user, require_mongo_admin as require_admin
+from app.rate_limit import check_login_allowed, record_failed_login, reset_failed_logins
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
-security = HTTPBearer()
 
 def get_users_collection():
     """Get the users collection from MongoDB database"""
@@ -71,64 +76,19 @@ async def log_user_activity(user_id: str, action: str, description: str, categor
     
     await activity_collection.insert_one(activity_data)
 
-async def get_current_user_from_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Get current user from JWT token for internal use"""
-    try:
-        payload = decode_jwt(credentials.credentials)
-        username = payload.get("sub")
-        if username is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authentication credentials",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    # Get user from MongoDB
-    user = await get_user_by_username(username)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return user
-
-async def require_admin(current_user = Depends(get_current_user_from_token)):
-    """Require admin role for MongoDB operations"""
-    if current_user.get("role") != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
-        )
-    return current_user
-
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_user(user_data: UserCreate, request: Request):
-    """Register a new user and store in MongoDB"""
+    """Register a new customer account (staff accounts are created by an admin)"""
     collection = get_users_collection()
-    
-    # Check if username already exists
-    existing_user = await get_user_by_username(user_data.username)
-    if existing_user:
+
+    # Usernames and emails must be unique across both user stores
+    conflict = await find_identity_conflict(username=user_data.username, email=user_data.email)
+    if conflict:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered"
+            detail=conflict
         )
-    
-    # Check if email already exists
-    existing_email = await get_user_by_email(user_data.email)
-    if existing_email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
-    
+        
     # Hash password
     hashed_password = get_password_hash(user_data.password)
     
@@ -137,7 +97,8 @@ async def register_user(user_data: UserCreate, request: Request):
         "username": user_data.username,
         "email": user_data.email,
         "hashed_password": hashed_password,
-        "role": user_data.role,
+        # Never trust a client-supplied role on public registration
+        "role": "customer",
         "first_name": user_data.first_name,
         "last_name": user_data.last_name,
         "phone": user_data.phone,
@@ -146,12 +107,12 @@ async def register_user(user_data: UserCreate, request: Request):
         "created_at": datetime.utcnow(),
         "last_login": None
     }
-    
+
     try:
         # Insert user into MongoDB
         result = await collection.insert_one(user_doc)
         user_id = str(result.inserted_id)
-        
+
         # Log registration activity
         await log_user_activity(
             user_id=user_id,
@@ -174,10 +135,11 @@ async def register_user(user_data: UserCreate, request: Request):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User with this username or email already exists"
         )
-    except Exception as e:
+    except Exception:
+        logger.exception("Failed to create user")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create user: {str(e)}"
+            detail="Failed to create user"
         )
 
 @router.post("/admin/create-user", status_code=status.HTTP_201_CREATED)
@@ -188,23 +150,15 @@ async def admin_create_user(
 ):
     """Create a new user (admin only) - stores in MongoDB"""
     collection = get_users_collection()
-    
-    # Check if username already exists
-    existing_user = await get_user_by_username(user_data.username)
-    if existing_user:
+
+    # Usernames and emails must be unique across both user stores
+    conflict = await find_identity_conflict(username=user_data.username, email=user_data.email)
+    if conflict:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered"
+            detail=conflict
         )
-    
-    # Check if email already exists
-    existing_email = await get_user_by_email(user_data.email)
-    if existing_email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
-    
+        
     # Hash password
     hashed_password = get_password_hash(user_data.password)
     
@@ -252,24 +206,33 @@ async def admin_create_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User with this username or email already exists"
         )
-    except Exception as e:
+    except Exception:
+        logger.exception("Failed to create user")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create user: {str(e)}"
+            detail="Failed to create user"
         )
 
 @router.post("/login", response_model=Token)
-async def login_user(user_credentials: UserLogin, request: Request):
-    """Login user and return JWT access token - validates against MongoDB"""
+async def login_user(user_credentials: UserLogin, request: Request, response: Response):
+    """Login user, set the httpOnly auth cookie and return the JWT - validates against MongoDB"""
+    check_login_allowed(user_credentials.username)
     # Authenticate against MongoDB
     user = await authenticate_user(user_credentials.username, user_credentials.password)
     if not user:
+        record_failed_login(user_credentials.username)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+    if not user.get("is_active", True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is deactivated",
+        )
+    reset_failed_logins(user_credentials.username)
+        
     # Update last login time in MongoDB
     collection = get_users_collection()
     await collection.update_one(
@@ -297,44 +260,23 @@ async def login_user(user_credentials: UserLogin, request: Request):
         },
         expires_delta=access_token_expires
     )
-    
+    set_auth_cookie(response, access_token)
+
     return {
         "access_token": access_token,
         "token_type": "bearer"
     }
 
+@router.post("/logout")
+async def logout_user(response: Response):
+    """Clear the auth cookie"""
+    clear_auth_cookie(response)
+    return {"message": "Logged out"}
+
 @router.get("/me", response_model=UserResponse)
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_current_user(user = Depends(get_current_mongo_user)):
     """Get current user information from MongoDB"""
-    # Verify token
-    try:
-        payload = decode_jwt(credentials.credentials)
-        username: str = payload.get("sub")
-        if username is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authentication credentials",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-    except HTTPException:
-        # Re-raise HTTP exceptions from decode_jwt
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    # Get user from MongoDB
-    user = await get_user_by_username(username)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
+        
     # Prepare user data for response
     user_data = {
         "id": str(user["_id"]),
@@ -386,10 +328,11 @@ async def get_all_users(
         
         return user_list
         
-    except Exception as e:
+    except Exception:
+        logger.exception("Failed to fetch users")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch users: {str(e)}"
+            detail="Failed to fetch users"
         )
 
 @router.get("/admin/users/{user_id}", response_model=UserResponse)
@@ -425,10 +368,11 @@ async def get_user_by_id_endpoint(
         
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
+        logger.exception("Failed to fetch user")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch user: {str(e)}"
+            detail="Failed to fetch user"
         )
 
 @router.put("/admin/users/{user_id}", response_model=UserResponse)
@@ -461,20 +405,16 @@ async def update_user(
         update_data["updated_at"] = datetime.utcnow()
         
         # Check for duplicate username/email if being updated
-        if "username" in update_data:
-            existing_username = await get_user_by_username(update_data["username"])
-            if existing_username and str(existing_username["_id"]) != user_id:
+        if "username" in update_data or "email" in update_data:
+            conflict = await find_identity_conflict(
+                username=update_data.get("username") if update_data.get("username") != existing_user["username"] else None,
+                email=update_data.get("email") if update_data.get("email") != existing_user["email"] else None,
+                exclude_mongo_id=existing_user["_id"],
+            )
+            if conflict:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Username already exists"
-                )
-        
-        if "email" in update_data:
-            existing_email = await get_user_by_email(update_data["email"])
-            if existing_email and str(existing_email["_id"]) != user_id:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Email already exists"
+                    detail=conflict
                 )
         
         # Update user in MongoDB
@@ -513,10 +453,11 @@ async def update_user(
         
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
+        logger.exception("Failed to update user")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update user: {str(e)}"
+            detail="Failed to update user"
         )
 
 @router.patch("/admin/users/{user_id}/toggle-active")
@@ -572,10 +513,11 @@ async def toggle_user_active_status(
         
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
+        logger.exception("Failed to toggle user status")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to toggle user status: {str(e)}"
+            detail="Failed to toggle user status"
         )
 
 @router.delete("/admin/users/{user_id}")
@@ -627,8 +569,9 @@ async def delete_user(
         
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
+        logger.exception("Failed to delete user")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete user: {str(e)}"
+            detail="Failed to delete user"
         )

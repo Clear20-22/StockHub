@@ -52,8 +52,8 @@ const Register = () => {
     // Password validation
     if (!formData.password) {
       errors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters long';
+    } else if (formData.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters long';
     }
 
     // Confirm password validation
@@ -381,7 +381,7 @@ const Register = () => {
                     </p>
                   )}
                   <p className="text-xs text-gray-500">
-                    At least 6 characters
+                    At least 8 characters
                   </p>
                 </div>
 

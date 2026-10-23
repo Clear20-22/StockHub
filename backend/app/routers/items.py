@@ -5,11 +5,16 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List
 from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
+import logging
 
 from app.mongodb import get_database
 from app.models import Item, ItemCreate, ItemUpdate
+from app.mongo_auth_dependencies import get_current_mongo_user, require_mongo_employee_or_admin
 
-router = APIRouter()
+logger = logging.getLogger(__name__)
+
+# Reading requires login; changes are limited to staff
+router = APIRouter(dependencies=[Depends(get_current_mongo_user)])
 
 def get_items_collection():
     """Get the items collection from database"""
@@ -17,7 +22,7 @@ def get_items_collection():
     return db.items
 
 @router.post("/", response_model=Item, status_code=status.HTTP_201_CREATED)
-async def create_item(item_data: ItemCreate):
+async def create_item(item_data: ItemCreate, current_user = Depends(require_mongo_employee_or_admin)):
     """Create a new item"""
     collection = get_items_collection()
     
@@ -42,10 +47,11 @@ async def create_item(item_data: ItemCreate):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Item with this name already exists"
         )
-    except Exception as e:
+    except Exception:
+        logger.exception("An error occurred while creating the item")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while creating the item: {str(e)}"
+            detail="An error occurred while creating the item"
         )
 
 @router.get("/", response_model=List[Item])
@@ -63,10 +69,11 @@ async def get_all_items():
             items.append(Item(**document))
         
         return items
-    except Exception as e:
+    except Exception:
+        logger.exception("An error occurred while fetching items")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while fetching items: {str(e)}"
+            detail="An error occurred while fetching items"
         )
 
 @router.get("/{item_id}", response_model=Item)
@@ -92,16 +99,17 @@ async def get_item_by_id(item_id: str):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Item not found"
             )
-    except Exception as e:
-        if "Invalid item ID format" in str(e):
-            raise e
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("An error occurred while fetching the item")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while fetching the item: {str(e)}"
+            detail="An error occurred while fetching the item"
         )
 
 @router.put("/{item_id}", response_model=Item)
-async def update_item(item_id: str, item_update: ItemUpdate):
+async def update_item(item_id: str, item_update: ItemUpdate, current_user = Depends(require_mongo_employee_or_admin)):
     """Update an item by ID"""
     if not ObjectId.is_valid(item_id):
         raise HTTPException(
@@ -147,14 +155,15 @@ async def update_item(item_id: str, item_update: ItemUpdate):
             )
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
+        logger.exception("An error occurred while updating the item")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while updating the item: {str(e)}"
+            detail="An error occurred while updating the item"
         )
 
 @router.delete("/{item_id}")
-async def delete_item(item_id: str):
+async def delete_item(item_id: str, current_user = Depends(require_mongo_employee_or_admin)):
     """Delete an item by ID"""
     if not ObjectId.is_valid(item_id):
         raise HTTPException(
@@ -185,8 +194,9 @@ async def delete_item(item_id: str):
             )
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
+        logger.exception("An error occurred while deleting the item")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while deleting the item: {str(e)}"
+            detail="An error occurred while deleting the item"
         )

@@ -1,15 +1,21 @@
 """
 MongoDB CRUD router for Goods collection (replaces SQLite goods)
 """
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from typing import List, Optional
 from bson import ObjectId
 from datetime import datetime
+import logging
+import re
 
 from app.mongodb import get_database
 from app.mongo_models import MongoGoods, GoodsCreate, GoodsUpdate, StockUpdate
+from app.mongo_auth_dependencies import get_current_mongo_user, require_mongo_employee_or_admin
 
-router = APIRouter()
+logger = logging.getLogger(__name__)
+
+# Reading requires login; changes are limited to staff
+router = APIRouter(dependencies=[Depends(get_current_mongo_user)])
 
 def get_goods_collection():
     """Get the goods collection from database"""
@@ -17,7 +23,7 @@ def get_goods_collection():
     return db.goods
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-async def create_goods(goods_data: GoodsCreate):
+async def create_goods(goods_data: GoodsCreate, current_user = Depends(require_mongo_employee_or_admin)):
     """Create new goods"""
     collection = get_goods_collection()
     
@@ -45,14 +51,20 @@ async def create_goods(goods_data: GoodsCreate):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create goods"
             )
-    except Exception as e:
+    except Exception:
+        logger.exception("An error occurred while creating goods")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while creating goods: {str(e)}"
+            detail="An error occurred while creating goods"
         )
 
 @router.get("/")
-async def get_all_goods(page: int = 1, limit: int = 10, search: str = None, category: str = None):
+async def get_all_goods(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    search: str = Query(None, max_length=100),
+    category: str = None,
+):
     """Get all goods with pagination and search"""
     collection = get_goods_collection()
     
@@ -63,6 +75,8 @@ async def get_all_goods(page: int = 1, limit: int = 10, search: str = None, cate
         # Build query filter
         query_filter = {}
         if search:
+            # Match the search text literally, not as a user-supplied regular expression
+            search = re.escape(search)
             query_filter["$or"] = [
                 {"name": {"$regex": search, "$options": "i"}},
                 {"description": {"$regex": search, "$options": "i"}},
@@ -98,10 +112,11 @@ async def get_all_goods(page: int = 1, limit: int = 10, search: str = None, cate
             "limit": limit,
             "total_pages": (total + limit - 1) // limit
         }
-    except Exception as e:
+    except Exception:
+        logger.exception("An error occurred while fetching goods")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while fetching goods: {str(e)}"
+            detail="An error occurred while fetching goods"
         )
 
 @router.get("/{goods_id}")
@@ -133,14 +148,15 @@ async def get_goods_by_id(goods_id: str):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Goods not found"
             )
-    except Exception as e:
+    except Exception:
+        logger.exception("An error occurred while fetching goods")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while fetching goods: {str(e)}"
+            detail="An error occurred while fetching goods"
         )
 
 @router.put("/{goods_id}")
-async def update_goods(goods_id: str, goods_update: GoodsUpdate):
+async def update_goods(goods_id: str, goods_update: GoodsUpdate, current_user = Depends(require_mongo_employee_or_admin)):
     """Update goods by ID"""
     if not ObjectId.is_valid(goods_id):
         raise HTTPException(
@@ -193,14 +209,15 @@ async def update_goods(goods_id: str, goods_update: GoodsUpdate):
             )
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
+        logger.exception("An error occurred while updating goods")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while updating goods: {str(e)}"
+            detail="An error occurred while updating goods"
         )
 
 @router.delete("/{goods_id}")
-async def delete_goods(goods_id: str):
+async def delete_goods(goods_id: str, current_user = Depends(require_mongo_employee_or_admin)):
     """Delete goods by ID"""
     if not ObjectId.is_valid(goods_id):
         raise HTTPException(
@@ -231,14 +248,15 @@ async def delete_goods(goods_id: str):
             )
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
+        logger.exception("An error occurred while deleting goods")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while deleting goods: {str(e)}"
+            detail="An error occurred while deleting goods"
         )
 
 @router.put("/{goods_id}/stock")
-async def update_stock(goods_id: str, stock_update: StockUpdate):
+async def update_stock(goods_id: str, stock_update: StockUpdate, current_user = Depends(require_mongo_employee_or_admin)):
     """Update stock quantity for goods"""
     if not ObjectId.is_valid(goods_id):
         raise HTTPException(
@@ -325,10 +343,11 @@ async def update_stock(goods_id: str, stock_update: StockUpdate):
             
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
+        logger.exception("An error occurred while updating stock")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while updating stock: {str(e)}"
+            detail="An error occurred while updating stock"
         )
 
 @router.get("/category/{category}")
@@ -350,8 +369,9 @@ async def get_goods_by_category(category: str):
             goods.append(document)
         
         return goods
-    except Exception as e:
+    except Exception:
+        logger.exception("An error occurred while fetching goods by category")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while fetching goods by category: {str(e)}"
+            detail="An error occurred while fetching goods by category"
         )

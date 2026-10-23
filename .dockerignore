@@ -6,3 +6,6 @@ dist
 *.log
 backend/
 docs/
+.env
+.env.*
+!.env.example

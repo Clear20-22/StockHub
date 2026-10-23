@@ -13,25 +13,27 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
-      // Verify token and get user info
-      fetchUser();
-    } else {
-      setLoading(false);
+    // Tokens used to be kept in localStorage; drop any left over from older versions
+    try {
+      localStorage.removeItem('token');
+    } catch {
+      // Storage can be unavailable (e.g. private mode); nothing to clean up then
     }
-  }, [token]);
+    // The session lives in an httpOnly cookie, so ask the server who is logged in
+    fetchUser();
+  }, []);
 
   const fetchUser = async () => {
     try {
       const response = await authAPI.getCurrentUser();
       setUser(response.data);
-    } catch (error) {
-      console.error('Error fetching user:', error);
-      logout();
+      return response.data;
+    } catch {
+      setUser(null);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -39,12 +41,9 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      const response = await authAPI.login(credentials);
-      const { access_token, user: userData } = response.data;
-      
-      localStorage.setItem('token', access_token);
-      setToken(access_token);
-      setUser(userData);
+      await authAPI.login(credentials);
+      // The server set the auth cookie; load the profile it belongs to
+      const userData = await fetchUser();
       
       return { success: true, user: userData };
     } catch (error) {
@@ -69,20 +68,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
+  const logout = async () => {
+    try {
+      await authAPI.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
     setUser(null);
   };
 
   const value = {
     user,
-    token,
     loading,
     login,
     register,
     logout,
-    isAuthenticated: !!token && !!user,
+    isAuthenticated: !!user,
   };
 
   return (

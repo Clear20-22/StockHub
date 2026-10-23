@@ -75,6 +75,22 @@ except ImportError:
         ]
 
 
+PLACEHOLDER_SECRET_MARKERS = ("change-this", "change-in-env", "your-super-secret")
+
+def validate_production_settings(settings: "Settings"):
+    """Refuse to run in production with missing or placeholder secrets."""
+    if settings.ENVIRONMENT != "production":
+        return
+    problems = []
+    for name in ("SECRET_KEY", "REFRESH_SECRET_KEY"):
+        value = getattr(settings, name)
+        if len(value) < 32 or any(marker in value for marker in PLACEHOLDER_SECRET_MARKERS):
+            problems.append(f"{name} must be a random value of at least 32 characters")
+    if settings.SECRET_KEY == settings.REFRESH_SECRET_KEY:
+        problems.append("SECRET_KEY and REFRESH_SECRET_KEY must be different")
+    if problems:
+        raise RuntimeError("Insecure production configuration: " + "; ".join(problems))
+
 @lru_cache()
 def get_settings() -> Settings:
     """Cached settings singleton for FastAPI Dependency Injection."""

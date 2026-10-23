@@ -60,7 +60,7 @@ src/
 ## State Management & Context Providers
 
 ### 1. `AuthContext` (`src/contexts/AuthContext.jsx`)
-* **Role**: Manages persistent user authentication identity, JWT access/refresh token storage (`localStorage`), login authentication, and logout cleanup.
+* **Role**: Manages persistent user authentication identity, session state (the JWT lives in an httpOnly cookie set by the backend, so scripts cannot read it), login authentication, and server-side logout.
 * **Usage Example**:
 ```javascript
 import { useAuth } from '../contexts/AuthContext';

@@ -1,35 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List
 from app import crud
 from app import schemas
 from app.database import get_db
-from app.auth_handler import decode_jwt
+from app.auth_dependencies import get_current_user, require_admin
+from app.identity import find_identity_conflict
 
 router = APIRouter()
-security = HTTPBearer()
-
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
-    """Get current user from JWT token"""
-    payload = decode_jwt(credentials.credentials)
-    username = payload.get("sub")
-    user = crud.get_user_by_username(db, username=username)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-        )
-    return user
-
-def require_admin(current_user = Depends(get_current_user)):
-    """Require admin role"""
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
-        )
-    return current_user
 
 @router.get("/me", response_model=schemas.User)
 def read_users_me(current_user = Depends(get_current_user)):
@@ -60,23 +38,19 @@ def read_user(
     return db_user
 
 @router.post("/", response_model=schemas.User)
-def create_user(
+async def create_user(
     user: schemas.UserCreate,
     request: Request,
     db: Session = Depends(get_db),
     current_user = Depends(require_admin)
 ):
     """Create new user (admin only)"""
-    # Check if user already exists
-    if crud.get_user_by_username(db, username=user.username):
+    # Check if user already exists in either user store
+    conflict = await find_identity_conflict(username=user.username, email=user.email)
+    if conflict:
         raise HTTPException(
             status_code=400,
-            detail="Username already registered"
-        )
-    if crud.get_user_by_email(db, email=user.email):
-        raise HTTPException(
-            status_code=400,
-            detail="Email already registered"
+            detail=conflict
         )
     
     # Create user
@@ -97,11 +71,11 @@ def create_user(
 
 @router.put("/me", response_model=schemas.User)
 def update_user_me(
-    user_update: schemas.UserUpdate,
+    user_update: schemas.UserSelfUpdate,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    """Update current user profile"""
+    """Update current user profile (role, status and HR fields are admin-only)"""
     updated_user = crud.update_user(db, current_user.id, user_update)
     return updated_user
 
