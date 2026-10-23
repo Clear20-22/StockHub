@@ -47,7 +47,17 @@ def migrate_database():
                     logger.info("last_login column already exists in users table")
                 else:
                     logger.warning(f"Could not add last_login column: {e}")
-            
+
+            # Add version column to goods table (optimistic locking for stock updates)
+            try:
+                connection.execute(text("ALTER TABLE goods ADD COLUMN version INTEGER NOT NULL DEFAULT 1;"))
+                logger.info("Added version column to goods table")
+            except Exception as e:
+                if "already exists" in str(e) or "duplicate column name" in str(e).lower():
+                    logger.info("version column already exists in goods table")
+                else:
+                    logger.warning(f"Could not add version column: {e}")
+
             # Create user_activities table if it doesn't exist
             try:
                 connection.execute(text("""
