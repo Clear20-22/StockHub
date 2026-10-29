@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNotification } from '../../../contexts/NotificationContext';
 import { goodsAPI } from '../../../services/api';
 import { 
@@ -11,7 +11,8 @@ import {
   Calendar,
   Hash,
   User,
-  Tag
+  Tag,
+  CheckCircle
 } from 'lucide-react';
 
 const GoodsModal = ({ isOpen, onClose, good, mode, branches, onSuccess }) => {
@@ -29,16 +30,32 @@ const GoodsModal = ({ isOpen, onClose, good, mode, branches, onSuccess }) => {
     batch_no: '',
     expiry_date: '',
     branch_id: '',
-    product_id: ''
+    product_id: '',
+    status: 'active'
   });
-  
+
   const [loading, setLoading] = useState(false);
+  // Blocks a second submit (e.g. a double click) before the disabled button re-renders
+  const submittingRef = useRef(false);
   const [errors, setErrors] = useState({});
 
   const categories = [
     'Electronics', 'Clothing', 'Food & Beverages', 'Furniture', 'Books',
     'Toys', 'Sports', 'Beauty', 'Home & Garden', 'Automotive', 'Other'
   ];
+
+  // Customer storage requests start as 'pending'; staff approve them by setting 'active'
+  const statusOptions = [
+    { value: 'pending', label: 'Pending approval' },
+    { value: 'active', label: 'Active' },
+    { value: 'rejected', label: 'Rejected' },
+    { value: 'released', label: 'Released' }
+  ];
+
+  // Customer requests may use a category not in the staff list; keep it selectable
+  const categoryOptions = formData.category && !categories.includes(formData.category)
+    ? [...categories, formData.category]
+    : categories;
 
   useEffect(() => {
     if (isOpen) {
@@ -55,7 +72,8 @@ const GoodsModal = ({ isOpen, onClose, good, mode, branches, onSuccess }) => {
           batch_no: good.batch_no || '',
           expiry_date: good.expiry_date ? good.expiry_date.split('T')[0] : '',
           branch_id: good.branch_id || '',
-          product_id: good.product_id || ''
+          product_id: good.product_id || '',
+          status: good.status || 'active'
         });
       } else {
         // Generate auto product ID for new items
@@ -72,7 +90,8 @@ const GoodsModal = ({ isOpen, onClose, good, mode, branches, onSuccess }) => {
           batch_no: '',
           expiry_date: '',
           branch_id: '',
-          product_id: autoId
+          product_id: autoId,
+          status: 'active'
         });
       }
       setErrors({});
@@ -140,11 +159,16 @@ const GoodsModal = ({ isOpen, onClose, good, mode, branches, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (submittingRef.current) {
+      return;
+    }
+
     if (!validateForm()) {
       showNotification('Please fix the form errors', 'error');
       return;
     }
 
+    submittingRef.current = true;
     setLoading(true);
 
     try {
@@ -153,7 +177,8 @@ const GoodsModal = ({ isOpen, onClose, good, mode, branches, onSuccess }) => {
         branch_id: parseInt(formData.branch_id),
         quantity: parseInt(formData.quantity),
         price_per_unit: parseFloat(formData.price_per_unit),
-        low_stock_threshold: parseInt(formData.low_stock_threshold)
+        low_stock_threshold: parseInt(formData.low_stock_threshold),
+        status: formData.status || 'active'
       };
 
       if (mode === 'edit') {
@@ -178,6 +203,7 @@ const GoodsModal = ({ isOpen, onClose, good, mode, branches, onSuccess }) => {
                           'Failed to save item. Please try again.';
       showNotification(errorMessage, 'error');
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
@@ -296,7 +322,7 @@ const GoodsModal = ({ isOpen, onClose, good, mode, branches, onSuccess }) => {
                   }`}
                 >
                   <option value="">Select category</option>
-                  {categories.map(category => (
+                  {categoryOptions.map(category => (
                     <option key={category} value={category}>{category}</option>
                   ))}
                 </select>
@@ -333,6 +359,31 @@ const GoodsModal = ({ isOpen, onClose, good, mode, branches, onSuccess }) => {
                     {errors.branch_id}
                   </p>
                 )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Status */}
+              <div>
+                <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Status
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {statusOptions.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {formData.status === 'pending'
+                    ? 'Customer request awaiting approval. Set to Active to approve it.'
+                    : 'Set to Active to approve a pending customer request'}
+                </p>
               </div>
             </div>
           </div>

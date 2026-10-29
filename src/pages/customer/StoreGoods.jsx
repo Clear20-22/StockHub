@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Package,
   Upload,
@@ -11,19 +11,34 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { goodsAPI } from '../../services/api';
+
+const emptyForm = {
+  name: '',
+  description: '',
+  category: '',
+  value: '',
+  storageDate: '',
+  specialInstructions: ''
+};
+
+// Turn an API error into a readable message (FastAPI validation errors arrive as a list)
+const getErrorMessage = (error) => {
+  const detail = error.response?.data?.detail;
+  if (Array.isArray(detail)) {
+    return detail.map(item => item.msg).filter(Boolean).join(', ') || 'Please check the form and try again.';
+  }
+  return detail || error.response?.data?.message || 'Failed to submit your storage request. Please try again.';
+};
 
 const StoreGoods = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    category: '',
-    value: '',
-    storageDate: '',
-    specialInstructions: ''
-  });
+  const [formData, setFormData] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  // Blocks a second submit (e.g. a double click) before the disabled button re-renders
+  const submittingRef = useRef(false);
 
   const categories = [
     'Electronics',
@@ -48,28 +63,34 @@ const StoreGoods = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (submittingRef.current) {
+      return;
+    }
+
+    submittingRef.current = true;
     setLoading(true);
+    setError('');
+    setSuccess(false);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await goodsAPI.requestStorage({
+        name: formData.name.trim(),
+        category: formData.category,
+        description: formData.description.trim() || null,
+        value: formData.value === '' ? 0 : Number(formData.value),
+        storage_date: formData.storageDate || null,
+        special_instructions: formData.specialInstructions.trim() || null
+      });
+
+      // Clear the form so the next request starts fresh; the success banner stays until the next submit
       setSuccess(true);
-      
-      // Reset form after success
-      setTimeout(() => {
-        setFormData({
-          name: '',
-          description: '',
-          category: '',
-          value: '',
-          storageDate: '',
-          specialInstructions: ''
-        });
-        setSuccess(false);
-      }, 3000);
-    } catch (error) {
-      console.error('Error storing goods:', error);
+      setFormData(emptyForm);
+    } catch (err) {
+      console.error('Error storing goods:', err);
+      setError(getErrorMessage(err));
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
@@ -105,11 +126,32 @@ const StoreGoods = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {success && (
           <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-start">
+              <CheckCircle className="h-5 w-5 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-green-800 font-medium">
+                  Your storage request has been submitted!
+                </p>
+                <p className="text-green-700 text-sm mt-1">
+                  It is now pending staff approval. You can follow its status under My Goods on your dashboard.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/customer/dashboard')}
+                className="ml-4 text-sm font-medium text-green-700 hover:text-green-900 underline whitespace-nowrap"
+              >
+                View My Goods
+              </button>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="flex items-center">
-              <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-              <p className="text-green-800 font-medium">
-                Your goods have been successfully submitted for storage!
-              </p>
+              <AlertCircle className="h-5 w-5 text-red-600 mr-2 flex-shrink-0" />
+              <p className="text-red-800 font-medium">{error}</p>
             </div>
           </div>
         )}

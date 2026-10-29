@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
+import { useNotification } from '../../contexts/NotificationContext';
+import { goodsAPI, branchesAPI } from '../../services/api';
+import {
   ArrowLeft,
   Package,
   Search,
@@ -23,14 +25,25 @@ import {
   Scan
 } from 'lucide-react';
 
+// Older records may miss fields, so derive everything defensively
+const getStockStatus = (quantity, threshold) => {
+  if (quantity <= 0) return 'out-of-stock';
+  if (quantity <= threshold) return 'low-stock';
+  return 'in-stock';
+};
+
 const EmployeeInventory = () => {
   const navigate = useNavigate();
-  const [inventory, setInventory] = useState([]);
+  const notify = useNotification();
+  const [goods, setGoods] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  // Ids of items with a stock update in flight
+  const [savingIds, setSavingIds] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedItems, setSelectedItems] = useState([]);
 
   useEffect(() => {
     fetchInventory();
@@ -39,113 +52,61 @@ const EmployeeInventory = () => {
   const fetchInventory = async () => {
     try {
       setLoading(true);
-      // Mock data - in real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockInventory = [
-        {
-          id: 1,
-          name: 'Wireless Bluetooth Headphones',
-          sku: 'WBH-001',
-          category: 'Electronics',
-          quantity: 45,
-          minQuantity: 10,
-          maxQuantity: 100,
-          price: 99.99,
-          location: 'A-1-01',
-          status: 'in-stock',
-          lastUpdated: '2024-08-21',
-          supplier: 'TechSupply Co.',
-          description: 'High-quality wireless Bluetooth headphones with noise cancellation'
-        },
-        {
-          id: 2,
-          name: 'Office Chair Pro',
-          sku: 'OCP-002',
-          category: 'Furniture',
-          quantity: 8,
-          minQuantity: 15,
-          maxQuantity: 50,
-          price: 299.99,
-          location: 'B-2-03',
-          status: 'low-stock',
-          lastUpdated: '2024-08-20',
-          supplier: 'OfficeMax Ltd.',
-          description: 'Ergonomic office chair with lumbar support'
-        },
-        {
-          id: 3,
-          name: 'Industrial Safety Helmet',
-          sku: 'ISH-003',
-          category: 'Safety',
-          quantity: 0,
-          minQuantity: 20,
-          maxQuantity: 200,
-          price: 45.50,
-          location: 'C-1-05',
-          status: 'out-of-stock',
-          lastUpdated: '2024-08-19',
-          supplier: 'SafetyFirst Inc.',
-          description: 'Heavy-duty safety helmet for industrial use'
-        },
-        {
-          id: 4,
-          name: 'Laptop Stand Adjustable',
-          sku: 'LSA-004',
-          category: 'Electronics',
-          quantity: 32,
-          minQuantity: 10,
-          maxQuantity: 80,
-          price: 65.99,
-          location: 'A-3-02',
-          status: 'in-stock',
-          lastUpdated: '2024-08-21',
-          supplier: 'TechSupply Co.',
-          description: 'Adjustable aluminum laptop stand for better ergonomics'
-        },
-        {
-          id: 5,
-          name: 'Steel Storage Cabinet',
-          sku: 'SSC-005',
-          category: 'Furniture',
-          quantity: 12,
-          minQuantity: 5,
-          maxQuantity: 30,
-          price: 189.99,
-          location: 'B-1-01',
-          status: 'in-stock',
-          lastUpdated: '2024-08-20',
-          supplier: 'MetalWorks Ltd.',
-          description: 'Heavy-duty steel storage cabinet with multiple shelves'
-        },
-        {
-          id: 6,
-          name: 'Disposable Gloves Box',
-          sku: 'DGB-006',
-          category: 'Safety',
-          quantity: 150,
-          minQuantity: 50,
-          maxQuantity: 500,
-          price: 12.99,
-          location: 'C-2-01',
-          status: 'in-stock',
-          lastUpdated: '2024-08-21',
-          supplier: 'SafetyFirst Inc.',
-          description: 'Box of 100 disposable nitrile gloves'
-        }
-      ];
-      setInventory(mockInventory);
+      setError(null);
+      // The goods endpoint is paginated (max 100 per page), so fetch every page
+      const allGoods = [];
+      let page = 1;
+      let totalPages = 1;
+      do {
+        const response = await goodsAPI.getGoods({ page, limit: 100 });
+        allGoods.push(...(response.data?.goods || []));
+        totalPages = response.data?.total_pages || 1;
+        page += 1;
+      } while (page <= totalPages);
+      setGoods(allGoods);
+
+      // Branch names are only used for the location column, so don't fail the page without them
+      try {
+        const branchesResponse = await branchesAPI.getBranches();
+        setBranches(Array.isArray(branchesResponse.data) ? branchesResponse.data : []);
+      } catch (branchError) {
+        console.error('Error fetching branches:', branchError);
+      }
     } catch (error) {
       console.error('Error fetching inventory:', error);
+      setError(error.response?.data?.detail || 'Failed to load inventory. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  // Map API goods to the shape the table uses
+  const inventory = goods.map(good => {
+    const quantity = Number(good.quantity) || 0;
+    const minQuantity = Number(good.low_stock_threshold) || 0;
+    const branch = branches.find(b => good.branch_id != null && String(b.id) === String(good.branch_id));
+    return {
+      id: good.id,
+      name: good.name || 'Unnamed item',
+      sku: good.sku || '',
+      category: good.category || 'Uncategorized',
+      description: good.description || '',
+      supplier: good.supplier || '',
+      quantity,
+      minQuantity,
+      price: Number(good.price_per_unit) || 0,
+      location: branch ? [branch.name, branch.location].filter(Boolean).join(' - ') : 'No branch assigned',
+      status: getStockStatus(quantity, minQuantity),
+      lastUpdated: good.updated_at || good.created_at || null
+    };
+  });
+
   const filteredInventory = inventory.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const term = searchTerm.toLowerCase();
+    const matchesSearch = item.name.toLowerCase().includes(term) ||
+                         item.sku.toLowerCase().includes(term) ||
+                         item.description.toLowerCase().includes(term) ||
+                         item.supplier.toLowerCase().includes(term);
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
     
@@ -170,25 +131,43 @@ const EmployeeInventory = () => {
     }
   };
 
-  const handleQuantityUpdate = (itemId, newQuantity) => {
-    setInventory(prev => prev.map(item => {
-      if (item.id === itemId) {
-        let status = 'in-stock';
-        if (newQuantity === 0) status = 'out-of-stock';
-        else if (newQuantity <= item.minQuantity) status = 'low-stock';
-        
-        return { 
-          ...item, 
-          quantity: Math.max(0, newQuantity),
-          status,
-          lastUpdated: new Date().toISOString().split('T')[0]
-        };
+  // +/- buttons: record a 1-unit stock in/out on the server and use its result for the row
+  const handleQuantityUpdate = async (item, type) => {
+    if (savingIds.includes(item.id)) return;
+    if (type === 'outward' && item.quantity <= 0) return;
+    const newQuantity = type === 'inward' ? item.quantity + 1 : item.quantity - 1;
+    try {
+      setSavingIds(prev => [...prev, item.id]);
+      const response = await goodsAPI.updateStock(item.id, {
+        type,
+        quantity: 1,
+        reason: type === 'inward' ? 'Stock received (employee inventory)' : 'Stock dispatched (employee inventory)',
+        good_id: item.id,
+        previous_quantity: item.quantity,
+        new_quantity: newQuantity,
+        updated_at: new Date().toISOString()
+      });
+      const updated = response.data?.goods;
+      if (updated?.id) {
+        setGoods(prev => prev.map(good => (good.id === updated.id ? { ...good, ...updated } : good)));
+      } else {
+        fetchInventory();
       }
-      return item;
-    }));
+    } catch (error) {
+      console.error('Error updating stock:', error);
+      notify.error(error.response?.data?.detail || `Failed to update stock for ${item.name}`);
+    } finally {
+      setSavingIds(prev => prev.filter(id => id !== item.id));
+    }
   };
 
-  const categories = [...new Set(inventory.map(item => item.category))];
+  const formatDate = (value) => {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString();
+  };
+
+  const categories = [...new Set(inventory.map(item => item.category))].sort();
   const stats = {
     totalItems: inventory.length,
     inStock: inventory.filter(item => item.status === 'in-stock').length,
@@ -234,7 +213,8 @@ const EmployeeInventory = () => {
               </button>
               <button
                 onClick={fetchInventory}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                disabled={loading}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
@@ -355,7 +335,26 @@ const EmployeeInventory = () => {
 
         {/* Inventory Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {filteredInventory.length === 0 ? (
+          {error ? (
+            <div className="text-center py-12">
+              <AlertTriangle className="mx-auto h-12 w-12 text-red-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Could not load inventory</h3>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <button
+                onClick={fetchInventory}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Try Again
+              </button>
+            </div>
+          ) : inventory.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No inventory yet</h3>
+              <p className="text-gray-600">No goods have been added to the inventory.</p>
+            </div>
+          ) : filteredInventory.length === 0 ? (
             <div className="text-center py-12">
               <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No items found</h3>
@@ -390,13 +389,17 @@ const EmployeeInventory = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredInventory.map((item) => (
+                  {filteredInventory.map((item) => {
+                    const saving = savingIds.includes(item.id);
+                    return (
                     <tr key={item.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                          <div className="text-sm text-gray-500">SKU: {item.sku}</div>
-                          <div className="text-xs text-gray-400 max-w-xs truncate">{item.description}</div>
+                          <div className="text-sm text-gray-500">SKU: {item.sku || '—'}</div>
+                          {item.description && (
+                            <div className="text-xs text-gray-400 max-w-xs truncate">{item.description}</div>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -407,23 +410,30 @@ const EmployeeInventory = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center space-x-2">
                           <button
-                            onClick={() => handleQuantityUpdate(item.id, item.quantity - 1)}
-                            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                            onClick={() => handleQuantityUpdate(item, 'outward')}
+                            disabled={saving || item.quantity <= 0}
+                            title="Remove 1 from stock"
+                            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             <Minus className="h-4 w-4" />
                           </button>
                           <span className="text-sm font-medium text-gray-900 min-w-[2rem] text-center">
-                            {item.quantity}
+                            {saving ? (
+                              <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 align-middle"></span>
+                            ) : item.quantity}
                           </span>
                           <button
-                            onClick={() => handleQuantityUpdate(item.id, item.quantity + 1)}
-                            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                            onClick={() => handleQuantityUpdate(item, 'inward')}
+                            disabled={saving}
+                            title="Add 1 to stock"
+                            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             <Plus className="h-4 w-4" />
                           </button>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          Min: {item.minQuantity} | Max: {item.maxQuantity}
+                          Min: {item.minQuantity}
+                          {formatDate(item.lastUpdated) && ` | Updated ${formatDate(item.lastUpdated)}`}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -443,7 +453,7 @@ const EmployeeInventory = () => {
                           ${(item.quantity * item.price).toLocaleString()}
                         </div>
                         <div className="text-xs text-gray-500">
-                          ${item.price} each
+                          ${item.price.toLocaleString()} each
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -460,7 +470,8 @@ const EmployeeInventory = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

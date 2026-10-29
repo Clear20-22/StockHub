@@ -15,8 +15,12 @@ import json
 
 from app.database import get_db, CustomerApplication, User
 from app.schemas import CustomerApplicationCreate, CustomerApplication as CustomerApplicationSchema, CustomerApplicationUpdate
-from app.auth_dependencies import require_admin, require_employee_or_admin
-from app.mongo_auth_dependencies import get_current_mongo_user
+# Staff accounts live in MongoDB (that's where the frontend logs in), so check roles there
+from app.mongo_auth_dependencies import (
+    get_current_mongo_user,
+    require_mongo_admin as require_admin,
+    require_mongo_employee_or_admin as require_employee_or_admin,
+)
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -190,7 +194,7 @@ async def get_all_applications(
     skip: int = 0,
     limit: int = 100,
     status: Optional[str] = None,
-    current_user: User = Depends(require_employee_or_admin),
+    current_user: dict = Depends(require_employee_or_admin),
     db: Session = Depends(get_db)
 ):
     """
@@ -207,7 +211,7 @@ async def get_all_applications(
 @router.get("/{application_id}", response_model=CustomerApplicationSchema)
 async def get_application(
     application_id: int,
-    current_user: User = Depends(require_employee_or_admin),
+    current_user: dict = Depends(require_employee_or_admin),
     db: Session = Depends(get_db)
 ):
     """
@@ -225,7 +229,7 @@ async def get_application(
 async def update_application(
     application_id: int,
     application_update: CustomerApplicationUpdate,
-    current_user: User = Depends(require_employee_or_admin),
+    current_user: dict = Depends(require_employee_or_admin),
     db: Session = Depends(get_db)
 ):
     """
@@ -245,7 +249,9 @@ async def update_application(
     
     # Set review information
     if application_update.status and application_update.status != application.status:
-        application.reviewed_by = current_user.id
+        # reviewed_by references the SQLite users table; MongoDB-only staff have no row there
+        sqlite_id = current_user.get("sqlite_id")
+        application.reviewed_by = sqlite_id if isinstance(sqlite_id, int) and sqlite_id > 0 else None
         application.review_date = datetime.utcnow()
     
     application.updated_at = datetime.utcnow()
@@ -262,7 +268,7 @@ async def update_application(
 @router.delete("/{application_id}")
 async def delete_application(
     application_id: int,
-    current_user: User = Depends(require_admin),
+    current_user: dict = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """
@@ -291,7 +297,7 @@ async def delete_application(
 
 @router.get("/stats/summary")
 async def get_application_stats(
-    current_user: User = Depends(require_employee_or_admin),
+    current_user: dict = Depends(require_employee_or_admin),
     db: Session = Depends(get_db)
 ):
     """

@@ -46,7 +46,9 @@ export const NotificationProvider = ({ children }) => {
       success,
       error,
       warning,
-      info
+      info,
+      // showNotification(message, type) is used by the goods pages and modals
+      showNotification: addNotification
     }}>
       {children}
       <NotificationContainer notifications={notifications} onRemove={removeNotification} />

@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 from app import crud, schemas
 from app.database import get_db
-from app.auth_dependencies import get_current_user, require_admin
+# Staff accounts live in MongoDB (that's where the frontend logs in), so check roles there
+from app.mongo_auth_dependencies import require_mongo_admin as require_admin
 
 router = APIRouter()
 

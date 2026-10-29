@@ -438,8 +438,20 @@ const ManageGoods = ({ onBack }) => {
                                   </div>
                                 </div>
                                 <div className="ml-4">
-                                  <div className="text-sm font-medium text-gray-900">
+                                  <div className="text-sm font-medium text-gray-900 flex items-center">
                                     {good.name}
+                                    {/* Records without a status are older, already-active items */}
+                                    {good.status && good.status !== 'active' && (
+                                      <span className={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full border ${
+                                        good.status === 'pending'
+                                          ? 'bg-orange-100 text-orange-800 border-orange-200'
+                                          : good.status === 'rejected'
+                                            ? 'bg-red-100 text-red-800 border-red-200'
+                                            : 'bg-gray-100 text-gray-800 border-gray-200'
+                                      }`}>
+                                        {good.status === 'pending' ? 'Pending approval' : good.status === 'rejected' ? 'Rejected' : 'Released'}
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="text-sm text-gray-500">
                                     SKU: {good.sku || 'N/A'} | ID: {good.product_id || good.id}

@@ -42,6 +42,13 @@ def require_mongo_roles(allowed_roles: list):
         return current_user
     return role_checker
 
+def user_identity_ids(user: dict) -> list:
+    """Ids that may refer to this user: the MongoDB id, plus the SQLite id for migrated users."""
+    ids = [str(user["_id"])]
+    if isinstance(user.get("sqlite_id"), int) and user["sqlite_id"] > 0:
+        ids.append(user["sqlite_id"])
+    return ids
+
 # Common role shortcuts
 require_mongo_admin = require_mongo_roles(["admin"])
 require_mongo_employee_or_admin = require_mongo_roles(["employee", "admin"])

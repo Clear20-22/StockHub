@@ -2,11 +2,15 @@
 Enhanced MongoDB Pydantic models for all migrated collections
 """
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Union
 from datetime import datetime
 from bson import ObjectId
 
 Role = Literal["customer", "employee", "admin"]
+GoodsStatus = Literal["pending", "active", "rejected", "released"]
+AssignmentStatus = Literal["pending", "in_progress", "completed", "cancelled"]
+AssignmentPriority = Literal["low", "medium", "high"]
+TimeEntryType = Literal["work", "break", "meeting"]
 
 class MongoUser(BaseModel):
     """MongoDB User model"""
@@ -107,9 +111,20 @@ class GoodsCreate(BaseModel):
     low_stock_threshold: int = Field(10, ge=0)
     batch_no: Optional[str] = None
     expiry_date: Optional[str] = None
-    owner_id: Optional[int] = None
+    # MongoDB user id (string) for new records; legacy records hold a SQLite user id (int)
+    owner_id: Optional[Union[str, int]] = None
     branch_id: Optional[int] = None
     product_id: Optional[str] = None
+    status: GoodsStatus = "active"
+
+class CustomerGoodsRequest(BaseModel):
+    """A customer's request to store an item (staff review it before it becomes active)"""
+    name: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=2000)
+    category: str = Field(..., min_length=1, max_length=100)
+    value: float = Field(0, ge=0)
+    storage_date: Optional[str] = None
+    special_instructions: Optional[str] = Field(None, max_length=2000)
 
 class GoodsUpdate(BaseModel):
     """Update goods model"""
@@ -126,6 +141,7 @@ class GoodsUpdate(BaseModel):
     owner_id: Optional[int] = None
     branch_id: Optional[int] = None
     product_id: Optional[str] = None
+    status: Optional[GoodsStatus] = None
 
 class MongoAssignment(BaseModel):
     """MongoDB Assignment model"""
@@ -145,16 +161,6 @@ class MongoAssignment(BaseModel):
         populate_by_name=True,
         json_encoders={ObjectId: str}
     )
-
-class AssignmentCreate(BaseModel):
-    """Create assignment model"""
-    employee_id: Optional[int] = None
-    task: str
-    description: Optional[str] = None
-    status: str = "pending"
-    priority: str = "medium"
-    branch_id: Optional[int] = None
-    due_date: Optional[datetime] = None
 
 class MongoUserActivity(BaseModel):
     """MongoDB User Activity model"""
@@ -201,6 +207,14 @@ class UserResponse(BaseModel):
     is_active: bool
     created_at: datetime
     last_login: Optional[datetime] = None
+    previous_login: Optional[datetime] = None
+    branch_id: Optional[int] = None
+    emergency_contact: Optional[str] = None
+    position: Optional[str] = None
+    department: Optional[str] = None
+    employee_id: Optional[str] = None
+    preferences: Optional[dict] = None
+    notification_settings: Optional[dict] = None
 
 class UserUpdate(BaseModel):
     """User update model for PATCH/PUT operations"""
@@ -228,3 +242,49 @@ class StockUpdate(BaseModel):
     previous_quantity: int
     new_quantity: int
     updated_at: str  # ISO datetime string from frontend
+
+class AssignmentCreate(BaseModel):
+    """Work assignment for an employee (a task, or a placement at a branch)"""
+    title: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=2000)
+    employee_id: str
+    branch_id: Optional[int] = None
+    role: Optional[str] = Field(None, max_length=100)
+    category: Optional[str] = Field(None, max_length=100)
+    priority: AssignmentPriority = "medium"
+    status: AssignmentStatus = "pending"
+    start_date: Optional[str] = None
+    due_date: Optional[str] = None
+    estimated_hours: Optional[float] = Field(None, ge=0)
+    progress: int = Field(0, ge=0, le=100)
+
+class AssignmentUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=2000)
+    employee_id: Optional[str] = None
+    branch_id: Optional[int] = None
+    role: Optional[str] = Field(None, max_length=100)
+    category: Optional[str] = Field(None, max_length=100)
+    priority: Optional[AssignmentPriority] = None
+    status: Optional[AssignmentStatus] = None
+    start_date: Optional[str] = None
+    due_date: Optional[str] = None
+    estimated_hours: Optional[float] = Field(None, ge=0)
+    actual_hours: Optional[float] = Field(None, ge=0)
+    progress: Optional[int] = Field(None, ge=0, le=100)
+
+class TimeEntryStart(BaseModel):
+    task: str = Field("General Work", min_length=1, max_length=200)
+    type: TimeEntryType = "work"
+    description: Optional[str] = Field(None, max_length=1000)
+    assignment_id: Optional[str] = None
+
+class ProfileUpdate(BaseModel):
+    """Fields users may change on their own profile"""
+    first_name: Optional[str] = Field(None, max_length=100)
+    last_name: Optional[str] = Field(None, max_length=100)
+    phone: Optional[str] = Field(None, max_length=50)
+    address: Optional[str] = Field(None, max_length=500)
+    emergency_contact: Optional[str] = Field(None, max_length=200)
+    preferences: Optional[dict] = None
+    notification_settings: Optional[dict] = None

@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from app.database import engine, Base
 from app.mongodb import connect_to_mongo, close_mongo_connection
 from app.routers import auth, users, goods, branches, assignments, items, customer_applications
-from app.routers import mongo_users, mongo_goods, mongo_auth
+from app.routers import mongo_users, mongo_goods, mongo_auth, mongo_assignments, mongo_time
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -105,6 +105,8 @@ app.include_router(customer_applications.router, prefix="/api/applications", tag
 app.include_router(mongo_auth.router, prefix="/api/mongo/auth", tags=["MongoDB Authentication"])
 app.include_router(mongo_users.router, prefix="/api/mongo/users", tags=["MongoDB Users"])
 app.include_router(mongo_goods.router, prefix="/api/mongo/goods", tags=["MongoDB Goods"])
+app.include_router(mongo_assignments.router, prefix="/api/mongo/assignments", tags=["MongoDB Assignments"])
+app.include_router(mongo_time.router, prefix="/api/mongo/time-entries", tags=["MongoDB Time Tracking"])
 
 @app.get("/")
 async def root():

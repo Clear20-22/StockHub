@@ -11,50 +11,40 @@ import {
   LogOut,
   User
 } from 'lucide-react';
-import { authAPI, goodsAPI } from '../../services/api';
+import { goodsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+
+const statusLabels = {
+  pending: 'Pending approval',
+  active: 'Active',
+  rejected: 'Rejected',
+  released: 'Released'
+};
+
+// The API sends UTC timestamps without a zone suffix; read them as UTC, not local time
+const parseDate = (value) => {
+  if (typeof value === 'string' && /T\d{2}:\d{2}/.test(value) && !/(Z|[+-]\d{2}:?\d{2})$/.test(value)) {
+    return new Date(`${value}Z`);
+  }
+  return new Date(value);
+};
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [userInfo, setUserInfo] = useState({
-    name: 'John Smith',
-    email: 'john.smith@example.com'
-  });
   const [customerGoods, setCustomerGoods] = useState([]);
   const [goodsLoading, setGoodsLoading] = useState(true);
+  const loading = goodsLoading;
 
-  // Customer data with API fetched info
-  const customerData = {
-    name: userInfo.name,
-    email: userInfo.email,
-    joinDate: '2023-03-15',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-    lastLogin: '2024-08-21T09:30:00Z'
-  };
-
-  // Fetch username and email from backend
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      try {
-        if (user) {
-          const response = await authAPI.getCurrentUser();
-          const userData = response.data;
-          
-          setUserInfo({
-            name: userData.username || 'Customer',
-            email: userData.email || 'You don\'t have an email'
-          });
-        }
-      } catch (error) {
-        console.warn('Failed to fetch user info, using default data:', error);
-        // Keep default mock data if API fails
-      }
-    };
-
-    fetchUserInfo();
-  }, [user]);
+  // Profile details come from the logged-in user
+  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ');
+  const displayName = fullName || user?.username || 'Customer';
+  const initials = (fullName
+    ? fullName.split(' ').map(part => part[0]).join('')
+    : (user?.username || 'C').slice(0, 2)
+  ).slice(0, 2).toUpperCase();
+  // previous_login is the login before this session; fall back to the current one
+  const lastLogin = user?.previous_login || user?.last_login;
 
   // Fetch customer goods from backend
   useEffect(() => {
@@ -63,20 +53,20 @@ const CustomerDashboard = () => {
         setGoodsLoading(true);
         if (user) {
           const response = await goodsAPI.getMyGoods();
-          const goodsData = response.data;
-          
-          // Convert goods to orders format for display
-          const formattedGoods = goodsData.map((good, index) => ({
-            id: `GOOD-${String(good.id).padStart(3, '0')}`,
+          const goodsData = Array.isArray(response.data) ? response.data : [];
+
+          // Shape goods for the table; customer requests are stored as quantity 1 at the declared value
+          const formattedGoods = goodsData.map((good) => ({
+            id: good.id,
+            displayId: good.product_id || good.sku || `GOOD-${String(good.id).slice(-6).toUpperCase()}`,
             items: good.name || 'Storage Item',
-            date: good.created_at || new Date().toISOString(),
-            status: good.status || 'Active',
-            amount: good.value || 0,
-            description: good.description || 'No description',
-            category: good.category || 'General',
-            branch: good.branch || 'Main Warehouse'
+            date: good.created_at,
+            status: (good.status || 'active').toLowerCase(),
+            amount: (Number(good.price_per_unit) || 0) * (Number(good.quantity) || 0),
+            description: good.description,
+            category: good.category
           }));
-          
+
           setCustomerGoods(formattedGoods);
         }
       } catch (error) {
@@ -90,37 +80,26 @@ const CustomerDashboard = () => {
     fetchCustomerGoods();
   }, [user]);
 
-  // Mock stats data with real goods count
   const stats = {
     totalGoods: customerGoods.length,
-    activeGoods: customerGoods.filter(good => good.status?.toLowerCase() === 'active').length,
-    pendingGoods: customerGoods.filter(good => good.status?.toLowerCase() === 'pending').length,
-    totalValue: customerGoods.reduce((sum, good) => sum + (good.amount || 0), 0)
+    activeGoods: customerGoods.filter(good => good.status === 'active').length,
+    pendingGoods: customerGoods.filter(good => good.status === 'pending').length,
+    totalValue: customerGoods.reduce((sum, good) => sum + good.amount, 0)
   };
 
-  useEffect(() => {
-    // Set loading to false when both user info and goods are loaded
-    if (!goodsLoading) {
-      const timer = setTimeout(() => setLoading(false), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [goodsLoading]);
-
   const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
+    switch (status) {
       case 'active': return 'bg-green-100 text-green-800';
-      case 'stored': return 'bg-green-100 text-green-800';
-      case 'delivered': return 'bg-green-100 text-green-800';
-      case 'in transit': return 'bg-blue-100 text-blue-800';
       case 'pending': return 'bg-orange-100 text-orange-800';
-      case 'inactive': return 'bg-gray-100 text-gray-800';
-      case 'removed': return 'bg-red-100 text-red-800';
+      case 'released': return 'bg-blue-100 text-blue-800';
+      case 'rejected': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    if (!dateString) return 'N/A';
+    return parseDate(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -141,7 +120,9 @@ const CustomerDashboard = () => {
             <div className="h-8 bg-gray-200 rounded animate-pulse w-16"></div>
           ) : (
             <p className={`text-3xl font-bold ${color}`}>
-              {title === 'Total Spent' ? `$${value.toLocaleString()}` : value}
+              {title === 'Total Value'
+                ? `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : value}
             </p>
           )}
         </div>
@@ -163,33 +144,35 @@ const CustomerDashboard = () => {
             <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-purple-700 px-8 py-6">
               <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-8">
                 <div className="relative">
-                  <img
-                    src={customerData.avatar}
-                    alt="Profile"
-                    className="h-24 w-24 md:h-32 md:w-32 rounded-full object-cover border-4 border-white shadow-lg"
-                  />
+                  {/* Initials avatar */}
+                  <div
+                    className="h-24 w-24 md:h-32 md:w-32 rounded-full bg-white bg-opacity-20 border-4 border-white shadow-lg flex items-center justify-center text-3xl md:text-4xl font-bold text-white"
+                    aria-label="Profile"
+                  >
+                    {initials}
+                  </div>
                   <div className="absolute -bottom-2 -right-2 bg-green-500 rounded-full p-2 border-4 border-white">
                     <div className="w-3 h-3 bg-white rounded-full"></div>
                   </div>
                 </div>
                 <div className="text-center md:text-left flex-1">
                   <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-                    Welcome back, {customerData.name}!
+                    Welcome back, {displayName}!
                   </h1>
-                  <p className="text-blue-100 text-lg mb-4">{customerData.email}</p>
+                  <p className="text-blue-100 text-lg mb-4">{user?.email || 'No email on file'}</p>
                   <div className="flex flex-col sm:flex-row gap-4 text-sm">
                     <div className="flex items-center justify-center md:justify-start text-blue-100">
                       <User className="h-4 w-4 mr-2" />
                       <span className="font-medium">Member since:</span>
                       <span className="ml-2 bg-white bg-opacity-20 text-white px-3 py-1 rounded-full">
-                        {formatDate(customerData.joinDate)}
+                        {formatDate(user?.created_at)}
                       </span>
                     </div>
                     <div className="flex items-center justify-center md:justify-start text-blue-100">
                       <Clock className="h-4 w-4 mr-2" />
                       <span className="font-medium">Last login:</span>
                       <span className="ml-2 bg-white bg-opacity-20 text-white px-3 py-1 rounded-full">
-                        {formatDate(customerData.lastLogin)}
+                        {lastLogin ? formatDate(lastLogin) : 'First login'}
                       </span>
                     </div>
                   </div>
@@ -303,10 +286,13 @@ const CustomerDashboard = () => {
                     customerGoods.map((good) => (
                       <tr key={good.id} className="hover:bg-gray-50 transition-colors duration-150">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-semibold text-gray-900">{good.id}</div>
+                          <div className="text-sm font-semibold text-gray-900">{good.displayId}</div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm text-gray-900 font-medium">{good.items}</div>
+                          {good.category && (
+                            <div className="text-xs text-blue-600 mt-1">{good.category}</div>
+                          )}
                           {good.description && (
                             <div className="text-xs text-gray-500 mt-1">{good.description}</div>
                           )}
@@ -316,7 +302,7 @@ const CustomerDashboard = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(good.status)}`}>
-                            {good.status}
+                            {statusLabels[good.status] || good.status}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -341,7 +327,10 @@ const CustomerDashboard = () => {
                           <p className="text-gray-500 mb-6 max-w-sm">
                             You haven't stored any goods yet. Start by adding your first item to our warehouse.
                           </p>
-                          <button className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                          <button
+                            onClick={() => navigate('/customer/store-goods')}
+                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                          >
                             <Package className="mr-2 h-4 w-4" />
                             Add Your First Good
                           </button>

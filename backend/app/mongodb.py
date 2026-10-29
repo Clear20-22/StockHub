@@ -30,10 +30,23 @@ async def connect_to_mongo():
         # Test the connection
         await mongodb.client.admin.command('ping')
         logger.info("Successfully connected to MongoDB Atlas")
+        await ensure_indexes(mongodb.database)
         
     except Exception as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
         raise
+
+async def ensure_indexes(database):
+    """Indexes the app relies on (creating an existing index is a no-op)"""
+    # One goods record per product ID, so a double-submitted form can't create a copy
+    await database.goods.create_index(
+        "product_id",
+        unique=True,
+        partialFilterExpression={"product_id": {"$type": "string", "$gt": ""}},
+        name="unique_product_id",
+    )
+    await database.assignments.create_index("employee_id")
+    await database.time_entries.create_index([("user_id", 1), ("start_time", -1)])
 
 async def close_mongo_connection():
     """Close database connection"""

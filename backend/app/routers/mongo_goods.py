@@ -9,8 +9,13 @@ import logging
 import re
 
 from app.mongodb import get_database
-from app.mongo_models import MongoGoods, GoodsCreate, GoodsUpdate, StockUpdate
-from app.mongo_auth_dependencies import get_current_mongo_user, require_mongo_employee_or_admin
+from app.mongo_models import MongoGoods, GoodsCreate, GoodsUpdate, StockUpdate, CustomerGoodsRequest
+from app.mongo_auth_dependencies import (
+    get_current_mongo_user,
+    require_mongo_employee_or_admin,
+    require_mongo_roles,
+    user_identity_ids,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +27,26 @@ def get_goods_collection():
     db = get_database()
     return db.goods
 
+def serialize_goods(document: dict) -> dict:
+    """Convert a goods document for JSON (string ids, default status for older records)"""
+    document["id"] = str(document.pop("_id"))
+    document.setdefault("status", "active")
+    for key, value in document.items():
+        if isinstance(value, ObjectId):
+            document[key] = str(value)
+    return document
+
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_goods(goods_data: GoodsCreate, current_user = Depends(require_mongo_employee_or_admin)):
     """Create new goods"""
     collection = get_goods_collection()
+    
+    # A repeated product_id means the same item was submitted twice (e.g. a double click)
+    if goods_data.product_id and await collection.find_one({"product_id": goods_data.product_id}):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An item with this product ID already exists"
+        )
     
     # Convert to dict and add timestamps
     goods_dict = goods_data.dict()
@@ -117,6 +138,52 @@ async def get_all_goods(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while fetching goods"
+        )
+
+@router.get("/my-goods")
+async def get_my_goods(current_user = Depends(get_current_mongo_user)):
+    """Goods owned by the logged-in user (newest first)"""
+    collection = get_goods_collection()
+    try:
+        owner_ids = user_identity_ids(current_user) + [current_user["_id"]]
+        cursor = collection.find({"owner_id": {"$in": owner_ids}}).sort("created_at", -1)
+        return [serialize_goods(document) async for document in cursor]
+    except Exception:
+        logger.exception("An error occurred while fetching your goods")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while fetching your goods"
+        )
+
+@router.post("/my-goods", status_code=status.HTTP_201_CREATED)
+async def request_storage(request: CustomerGoodsRequest, current_user = Depends(require_mongo_roles(["customer"]))):
+    """A customer asks to store an item; it stays pending until staff approve it"""
+    now = datetime.utcnow()
+    goods_dict = {
+        "name": request.name,
+        "description": request.description,
+        "category": request.category,
+        "quantity": 1,
+        "price_per_unit": request.value,
+        "low_stock_threshold": 0,
+        "storage_date": request.storage_date,
+        "special_instructions": request.special_instructions,
+        "owner_id": str(current_user["_id"]),
+        "branch_id": current_user.get("branch_id"),
+        "status": "pending",
+        "created_at": now,
+        "updated_at": now,
+        "sqlite_id": -1,
+    }
+    try:
+        result = await get_goods_collection().insert_one(goods_dict)
+        created = await get_goods_collection().find_one({"_id": result.inserted_id})
+        return serialize_goods(created)
+    except Exception:
+        logger.exception("An error occurred while saving your storage request")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while saving your storage request"
         )
 
 @router.get("/{goods_id}")

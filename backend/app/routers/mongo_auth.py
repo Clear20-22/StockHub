@@ -10,7 +10,7 @@ from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
 
 from app.mongodb import get_database
-from app.mongo_models import MongoUser, UserCreate, UserLogin, UserResponse, UserUpdate, Token
+from app.mongo_models import MongoUser, UserCreate, UserLogin, UserResponse, UserUpdate, Token, ProfileUpdate
 from app.auth_handler import (
     create_access_token,
     get_password_hash,
@@ -20,7 +20,7 @@ from app.auth_handler import (
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
 from app.identity import find_identity_conflict
-from app.mongo_auth_dependencies import get_current_mongo_user, require_mongo_admin as require_admin
+from app.mongo_auth_dependencies import get_current_mongo_user, require_mongo_admin as require_admin, user_identity_ids
 from app.rate_limit import check_login_allowed, record_failed_login, reset_failed_logins
 
 logger = logging.getLogger(__name__)
@@ -237,7 +237,8 @@ async def login_user(user_credentials: UserLogin, request: Request, response: Re
     collection = get_users_collection()
     await collection.update_one(
         {"_id": user["_id"]},
-        {"$set": {"last_login": datetime.utcnow()}}
+        # Keep the previous login so the dashboard can show "last login" before this session
+        {"$set": {"last_login": datetime.utcnow(), "previous_login": user.get("last_login")}}
     )
     
     # Log login activity to MongoDB
@@ -289,15 +290,52 @@ async def get_current_user(user = Depends(get_current_mongo_user)):
         "address": user.get("address"),
         "is_active": user["is_active"],
         "created_at": user["created_at"],
-        "last_login": user.get("last_login")
+        "last_login": user.get("last_login"),
+        "previous_login": user.get("previous_login"),
+        "branch_id": user.get("branch_id"),
+        "emergency_contact": user.get("emergency_contact"),
+        "position": user.get("position"),
+        "department": user.get("department"),
+        "employee_id": user.get("employee_id"),
+        "preferences": user.get("preferences") if isinstance(user.get("preferences"), dict) else None,
+        "notification_settings": user.get("notification_settings") if isinstance(user.get("notification_settings"), dict) else None,
     }
     
     return UserResponse(**user_data)
+
+@router.put("/me", response_model=UserResponse)
+async def update_my_profile(profile: ProfileUpdate, user = Depends(get_current_mongo_user)):
+    """Update the logged-in user's own profile (role, status and HR fields are admin-only)"""
+    update_data = profile.dict(exclude_unset=True)
+    if update_data:
+        update_data["updated_at"] = datetime.utcnow()
+        await get_users_collection().update_one({"_id": user["_id"]}, {"$set": update_data})
+        user = await get_users_collection().find_one({"_id": user["_id"]})
+    return await get_current_user(user)
+
+@router.get("/me/activities")
+async def get_my_activities(limit: int = 20, user = Depends(get_current_mongo_user)):
+    """The logged-in user's recent activity log (newest first)"""
+    limit = max(1, min(limit, 100))
+    cursor = get_database().user_activities.find(
+        {"user_id": {"$in": user_identity_ids(user)}}
+    ).sort("timestamp", -1).limit(limit)
+    return [
+        {
+            "id": str(activity["_id"]),
+            "action": activity.get("action"),
+            "description": activity.get("description"),
+            "category": activity.get("category"),
+            "timestamp": activity["timestamp"].isoformat() + "Z" if activity.get("timestamp") else None,
+        }
+        async for activity in cursor
+    ]
 
 @router.get("/admin/users", response_model=List[UserResponse])
 async def get_all_users(
     skip: int = 0,
     limit: int = 100,
+    role: Optional[str] = None,
     current_user = Depends(require_admin)
 ):
     """Get all users from MongoDB (admin only) - sorted by creation time descending"""
@@ -305,7 +343,8 @@ async def get_all_users(
     
     try:
         # Fetch users sorted by created_at in descending order (newest first)
-        cursor = collection.find().sort("created_at", -1).skip(skip).limit(limit)
+        query = {"role": role} if role else {}
+        cursor = collection.find(query).sort("created_at", -1).skip(skip).limit(limit)
         users = await cursor.to_list(length=limit)
         
         # Convert users to UserResponse format
